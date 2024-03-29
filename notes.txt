@@ -1,0 +1,64 @@
+Physics based modeling
+https://www.cs.cmu.edu/~baraff/pbm/
+https://en.wikipedia.org//wiki/Lennard-Jones_potential
+https://en.wikibooks.org/wiki/Molecular_Simulation/Charge-Charge_Interactions
+
+Quantum modeling?
+https://en.wikipedia.org/wiki/Schr%C3%B6dinger_equation#Time-independent_equation
+https://en.wikipedia.org/wiki/Hamiltonian_(quantum_mechanics)
+https://energywavetheory.com/project/phase1/
+https://energywavetheory.com/project/phase5/
+https://energywavetheory.com/introduction/
+
+https://ocw.mit.edu/courses/8-321-quantum-theory-i-fall-2017/pages/lecture-notes/
+https://ocw.mit.edu/courses/3-320-atomistic-computer-modeling-of-materials-sma-5107-spring-2005/
+
+Simulators
+https://www.sciencedirect.com/topics/computer-science/particle-simulation
+http://particlesandbox.com/
+LAAMPS
+https://www.quantum-espresso.org/login/
+
+Kohn-Sham approximation
+
+Considerations:
+"Internal configuration"
+	Particle type
+	Charge
+	Count
+	Initial state
+"External configurations"
+	Gravity
+	Magnetic waves
+	Current ???
+	Pressure -> This should be tailored via other params
+	Temperature -> This should be tailored via other params
+	Other external forces
+
+Goals:
+Simulate particle interaction in common environments
+	Easy example is particles in water
+
+Simulate particle interaction in extreme environment
+	Fusion of Hydrogen/Deuterium into Helium in Plasma
+
+Recognize differernt states of matter?
+Perform chemical reactions
+
+Questions:
+What dictates temperature?
+
+Timestep considerations:
+choosing the correct time step is important as too large of a timestep will lead to model errors
+Too small of a timestep and the simulation will be too slow.
+
+Can we do a cheap analysis of the force calculations to determine a dynamic and suitable timestep?
+	- In a slow system having a longer timestep is acceptable
+	- In a very fast system the timestep must be much tighter.
+		-Can we do a error calculation some sort of expected error based on time step.
+		-Given an acceptable error we can get a function of timestep.
+The big thing is to consider is whether or not having a dynamic timestep will provide benefit.
+A simpler and perhaps better option is to look at the total temperature of the system and use that to do
+an initial calculation check.
+
+	
