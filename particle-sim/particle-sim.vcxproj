@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="inc\gl.c" />
+    <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\main.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
