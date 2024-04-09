@@ -1,28 +1,13 @@
 #include <stdio.h>
+#include <math.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <cuda.h>
 
+#include "shaderClass.h"
 
-
-
-
-// Vertex Shader source code
-const char* vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"}\0";
-//Fragment Shader source code
-const char* fragmentShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vec4(0.8f, 0.3f, 0.02f, 1.0f);\n"
-"}\n\0";
 
 
 
@@ -30,6 +15,9 @@ struct Particle {
     GLfloat x;
     GLfloat y;
     GLfloat z;
+    GLuint r;
+    GLuint g;
+    GLuint b;
 } typedef Particle;
 
 int main(int argc, char** argv) {
@@ -37,9 +25,15 @@ int main(int argc, char** argv) {
     //Initialize particles
     Particle particles[1000];
     for (int i = 0; i < 1000; i++) {
-        particles[i].x = -1.0f + i % 10 * 0.2f;
-        particles[i].y = -1.0f + ((i / 10) % 10) * 0.2f;
-        particles[i].z = -1.0f + i / 100 * 0.2f;
+        float theta = (float) (999 - i) / 1000 * 2 * 3.1415;
+        particles[i].x = (GLfloat) cos(theta);
+        particles[i].y = (GLfloat) sin(theta);
+        particles[i].z = 1;
+        particles[i].r = i % 255;
+        particles[i].g = 255 - (i % 255);
+        particles[i].b = 55;
+
+
     }
     //Initialize GLFW 
     glfwInit();
@@ -58,7 +52,7 @@ int main(int argc, char** argv) {
     glfwMakeContextCurrent(window);
 
     //Load OpenGL functions
-    gladLoadGL(glfwGetProcAddress);
+    gladLoadGL();
 
     //What range of the screen we are actually drawing
     // (0, 0, 800, 600) is the full screen given the window size of 800x600
@@ -66,31 +60,9 @@ int main(int argc, char** argv) {
 
 
 
-    // Create Vertex Shader Object and get its reference
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	// Attach Vertex Shader source to the Vertex Shader Object
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	// Compile the Vertex Shader into machine code
-	glCompileShader(vertexShader);
+    Shader shaderProgram("../res/default.vert", "../res/default.frag");
 
-	// Create Fragment Shader Object and get its reference
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	// Attach Fragment Shader source to the Fragment Shader Object
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-	// Compile the Vertex Shader into machine code
-	glCompileShader(fragmentShader);
 
-	// Create Shader Program Object and get its reference
-	GLuint shaderProgram = glCreateProgram();
-	// Attach the Vertex and Fragment Shaders to the Shader Program
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	// Wrap-up/Link all the shaders together into the Shader Program
-	glLinkProgram(shaderProgram);
-
-	// Delete the now useless Vertex and Fragment Shader objects
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
 
     // VBO (Vertex Buffer Object) -> Buffer to send stuff to the GPU
     // VAO (Vertex Array Object) -> Stores pointers to VBOs and tells openGL how to interpret the data
@@ -105,7 +77,7 @@ int main(int argc, char** argv) {
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(particles), particles, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
 
 
     //Tell OpenGL how to interpret the data
@@ -116,10 +88,16 @@ int main(int argc, char** argv) {
     // normalized is whether the data should be normalized (are values between -1 and 1?)
     // stride is the byte offset between consecutive vertex attributes
     // pointer is the offset of the first component of the first vertex attribute in the array
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
+
+    //I attempted to combine the color and position attributes here. It didn't work... Looking at the n-body example, 
+    //It seems like different buffers entirely are used for color, and positions, thus, we should probably do the same. 
+    //It will also be slightly different because the color should be either proton or electron. 
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(3*sizeof(GLfloat)));
 
     //Enable the vertex attribute
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
 
     //cudaGLRegisterBufferObject(VBO);
 
@@ -147,7 +125,7 @@ int main(int argc, char** argv) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         //Use the shader program
-        glUseProgram(shaderProgram);
+        shaderProgram.Activate();
 
         //Bind the VAO
         glBindVertexArray(VAO);
@@ -157,6 +135,7 @@ int main(int argc, char** argv) {
         //Swap the buffers so we see the new frame generated.
         glfwSwapBuffers(window);
 
+        
 
 
 
@@ -164,6 +143,20 @@ int main(int argc, char** argv) {
         //We want to draw the points onto the screen:
         
         glfwPollEvents();
+        float temp_x = particles[0].x;
+        float temp_y = particles[0].y;
+        float temp_z = particles[0].z; 
+
+        //for (int i = 0; i < 999; i++) {
+        //    particles[i].x = particles[i + 1].x;
+        //    particles[i].y = particles[i + 1].y;
+        //    particles[i].z = particles[i + 1].z;
+        //}
+
+        //particles[999].x = temp_x;
+        //particles[999].y = temp_y;
+        //particles[999].z = temp_z;
+        glBufferData(GL_ARRAY_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
     }
 
     //We have completed so we need to clean up.
@@ -173,7 +166,7 @@ int main(int argc, char** argv) {
     glDeleteBuffers(1, &VBO);
 
     //Delete the shader program
-    glDeleteProgram(shaderProgram);
+    shaderProgram.Delete();
 
     //Terminate GLFW
     glfwDestroyWindow(window);
