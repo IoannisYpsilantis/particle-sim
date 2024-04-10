@@ -2,45 +2,45 @@
 
 const char vertexShaderSource[] = { "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
-"layout (location = 1) in vec3 color;\n"
-"out vec3 fragColor;\n"
+"layout (location = 1) in uvec3 color;\n"
+"out vec3 vertexColor;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"   fragColor = vec3(color.x, color.y, color.z);\n"
+"   gl_Position = vec4(aPos, 1.0);\n"
+"   vertexColor = color / 255.0;\n"
 "}" };
 
 
 const char fragmentShaderSource[] = { "#version 330 core\n"
-"in vec3 fragColor;\n"
+"in vec3 vertexColor;\n"
 "out vec4 FragColor;\n"
 "void main()\n"
 "{\n"
-"   FragColor = vec4(fragColor, 1.0f);\n"
+"   FragColor = vec4(vertexColor, 1.0f);\n"
 "}\n" };
 
 // Constructor that build the Shader Program from 2 different shaders
-Shader::Shader(const char* vertexFile, const char* fragmentFile)
+Shader::Shader()
 {
 	// Read vertexFile and fragmentFile and store the strings
-	std::string vertexCode = vertexShaderSource;
-	std::string fragmentCode = fragmentShaderSource;
+	const char* vertexCode = vertexShaderSource;
+	const char* fragmentCode = fragmentShaderSource;
 
 	// Convert the shader source strings into character arrays
-	const char* vertexSource = vertexCode.c_str();
-	const char* fragmentSource = fragmentCode.c_str();
+	//const char* vertexSource = vertexCode.c_str();
+	//const char* fragmentSource = fragmentCode.c_str();
 
 	// Create Vertex Shader Object and get its reference
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	// Attach Vertex Shader source to the Vertex Shader Object
-	glShaderSource(vertexShader, 1, &vertexSource, NULL);
+	glShaderSource(vertexShader, 1, &vertexCode, NULL);
 	// Compile the Vertex Shader into machine code
 	glCompileShader(vertexShader);
 
 	// Create Fragment Shader Object and get its reference
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	// Attach Fragment Shader source to the Fragment Shader Object
-	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
+	glShaderSource(fragmentShader, 1, &fragmentCode, NULL);
 	// Compile the Vertex Shader into machine code
 	glCompileShader(fragmentShader);
 

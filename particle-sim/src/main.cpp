@@ -11,27 +11,32 @@
 
 
 
-struct Particle {
+struct particle_pos {
     GLfloat x;
     GLfloat y;
     GLfloat z;
+    
+} typedef Particle_pos;
+
+struct particle_col {
     GLuint r;
     GLuint g;
     GLuint b;
-} typedef Particle;
-
+} typedef Particle_col;
 int main(int argc, char** argv) {
 
     //Initialize particles
-    Particle particles[1000];
+    Particle_pos particles_pos[1000];
+    Particle_col particles_col[1000];
+
     for (int i = 0; i < 1000; i++) {
         float theta = (float) (999 - i) / 1000 * 2 * 3.1415;
-        particles[i].x = (GLfloat) cos(theta);
-        particles[i].y = (GLfloat) sin(theta);
-        particles[i].z = 1;
-        particles[i].r = i % 255;
-        particles[i].g = 255 - (i % 255);
-        particles[i].b = 55;
+        particles_pos[i].x = (GLfloat) cos(theta);
+        particles_pos[i].y = (GLfloat) sin(theta);
+        particles_pos[i].z = 1;
+        particles_col[i].r = i % 255;
+        particles_col[i].g = 255 - (i % 255);
+        particles_col[i].b = 55;
 
 
     }
@@ -60,24 +65,31 @@ int main(int argc, char** argv) {
 
 
 
-    Shader shaderProgram("../res/default.vert", "../res/default.frag");
+    Shader shaderProgram;
 
 
 
     // VBO (Vertex Buffer Object) -> Buffer to send stuff to the GPU
     // VAO (Vertex Array Object) -> Stores pointers to VBOs and tells openGL how to interpret the data
-    GLuint VAO, VBO;
+    GLuint VAO, positionBuffer, colorBuffer;
 
     //One VBO so we put 1. 
     glGenVertexArrays(1, &VAO);
 
     glBindVertexArray(VAO);
 
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glGenBuffers(1, &positionBuffer);
+    glGenBuffers(1, &colorBuffer);
 
+    glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(particles_pos), particles_pos, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(particles_col), particles_col, GL_STATIC_DRAW);
+    glVertexAttribIPointer(1, 3, GL_UNSIGNED_INT, 0, (void*)0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
     //Tell OpenGL how to interpret the data
@@ -92,8 +104,8 @@ int main(int argc, char** argv) {
     //I attempted to combine the color and position attributes here. It didn't work... Looking at the n-body example, 
     //It seems like different buffers entirely are used for color, and positions, thus, we should probably do the same. 
     //It will also be slightly different because the color should be either proton or electron. 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(3*sizeof(GLfloat)));
+    //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)0);
+    //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(3*sizeof(GLfloat)));
 
     //Enable the vertex attribute
     glEnableVertexAttribArray(0);
@@ -143,27 +155,31 @@ int main(int argc, char** argv) {
         //We want to draw the points onto the screen:
         
         glfwPollEvents();
-        float temp_x = particles[0].x;
-        float temp_y = particles[0].y;
-        float temp_z = particles[0].z; 
+        float temp_x = particles_pos[0].x;
+        float temp_y = particles_pos[0].y;
+        float temp_z = particles_pos[0].z; 
 
-        //for (int i = 0; i < 999; i++) {
-        //    particles[i].x = particles[i + 1].x;
-        //    particles[i].y = particles[i + 1].y;
-        //    particles[i].z = particles[i + 1].z;
-        //}
+        for (int i = 0; i < 999; i++) {
+            particles_pos[i].x = particles_pos[i + 1].x;
+            particles_pos[i].y = particles_pos[i + 1].y;
+            particles_pos[i].z = particles_pos[i + 1].z;
+        }
 
-        //particles[999].x = temp_x;
-        //particles[999].y = temp_y;
-        //particles[999].z = temp_z;
-        glBufferData(GL_ARRAY_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
+        particles_pos[999].x = temp_x;
+        particles_pos[999].y = temp_y;
+        particles_pos[999].z = temp_z;
+
+        glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(particles_pos), particles_pos, GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     //We have completed so we need to clean up.
 
     //Delete the VBO and VAO
     glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &positionBuffer);
+    glDeleteBuffers(1, &colorBuffer);
 
     //Delete the shader program
     shaderProgram.Delete();
