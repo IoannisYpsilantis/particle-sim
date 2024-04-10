@@ -1,3 +1,4 @@
+// Includes
 #include <stdio.h>
 
 #include <glad/glad.h>
@@ -10,25 +11,18 @@
 #include "particleSystem.h"
 #include "particleSystemCpu.h"
 
-
-
-
+// Environment Parameters
+const int numParticles = 1000;
+const bool useCPU = true;
 
 int main(int argc, char** argv) {
-
-    int numParticles = 1000;
-
-    bool cpu = true;
-
-   
 
     //Initialize GLFW 
     glfwInit();
 
     //This window is where we will view our graphics
     // (width, height, title, monitor, share)
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Hello World", NULL, NULL);
-
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Particle Simulation", NULL, NULL);
 
     //Check to make sure window was actually created, if not exit.
     if (!window) {
@@ -49,7 +43,7 @@ int main(int argc, char** argv) {
     float* particles_pos;
     unsigned int* particles_col;
     ParticleSystem* system;
-    if (cpu) {
+    if (useCPU) {
         system = new ParticleSystemCPU(numParticles, 0);
     }
     else {
@@ -61,14 +55,7 @@ int main(int argc, char** argv) {
 
     Shader shaderProgram;
 
-
-
     Buffer buffers(particles_pos, particles_col, 1000);
-
-
-    
-
-   
 
     //Specify the color of the window
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -87,14 +74,12 @@ int main(int argc, char** argv) {
         //Use the shader program
         shaderProgram.Activate();
 
-
         glDrawArrays(GL_POINTS, 0, 1000);
 
         //Swap the buffers so we see the new frame generated.
         glfwSwapBuffers(window);
 
         //We want to draw the points onto the screen:
-        
         glfwPollEvents();
         
         system->update(0);
@@ -110,7 +95,6 @@ int main(int argc, char** argv) {
     shaderProgram.Delete();
 
     //Delete the particleSystem
-
     delete system;
 
     //Terminate GLFW
