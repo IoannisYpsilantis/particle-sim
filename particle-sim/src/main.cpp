@@ -11,6 +11,11 @@
 #include "particleSystem.h"
 #include "particleSystemCpu.h"
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
+
 // Environment Parameters
 const int numParticles = 1000;
 const bool useCPU = true;
@@ -22,7 +27,9 @@ int main(int argc, char** argv) {
 
     //This window is where we will view our graphics
     // (width, height, title, monitor, share)
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Particle Simulation", NULL, NULL);
+    int width = 800;
+    int height = 600;
+    GLFWwindow* window = glfwCreateWindow(width, height, "Particle Simulation", NULL, NULL);
 
     //Check to make sure window was actually created, if not exit.
     if (!window) {
@@ -30,21 +37,26 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+
+
     //Make the window the context for OpenGL
     glfwMakeContextCurrent(window);
+
 
     //Load OpenGL functions
     gladLoadGL();
 
     //What range of the screen we are actually drawing
     // (0, 0, 800, 600) is the full screen given the window size of 800x600
-    glViewport(0, 0, 800, 600);
+    glViewport(0, 0, width, height);
+
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     float* particles_pos;
     unsigned int* particles_col;
     ParticleSystem* system;
     if (useCPU) {
-        system = new ParticleSystemCPU(numParticles, 2);
+        system = new ParticleSystemCPU(numParticles, 0);
     }
     else {
         //Do GPU class initialization
@@ -65,7 +77,9 @@ int main(int argc, char** argv) {
 
     //Swap the buffers so we see the new frame generated.
     glfwSwapBuffers(window);
+    GLint m_viewport[4];
 
+    
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
     while(!glfwWindowShouldClose(window)) {
         glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
