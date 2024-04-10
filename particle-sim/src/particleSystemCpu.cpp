@@ -1,5 +1,5 @@
 #include "particleSystemCpu.h"
-
+#include <cstdlib>
 
 ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod) {
 	p_numParticles = numParticles;
@@ -16,10 +16,10 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod) {
 
 	
 
-	//Random initialization
+	// Circular initialization
 	if (initMethod == 0) {
 		for (unsigned int i = 0; i < numParticles; i++) {
-			float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2 * 3.1415); // Ensure floating-point division
+			float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2.0 * 3.1415); // Ensure floating-point division
 			positions[i * 4] = (float)cos(theta);
 			positions[i * 4 + 1] = (float)sin(theta);
 			positions[i * 4 + 2] = 1.0f;
@@ -34,6 +34,19 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod) {
 	//Read from a file
 	else if (initMethod == 1) {
 
+	}
+	// Random initialization
+	else if (initMethod == 2) {
+		for (unsigned int i = 0; i < numParticles; i++) {
+			positions[i * 4] = (float)(rand() % 2000 - 1000) / 1000.0;
+			positions[i * 4 + 1] = (float)(rand() % 2000 - 1000) / 1000.0;
+			positions[i * 4 + 2] = 1.0f;
+			positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+
+			colors[i * 3] = i % 255;
+			colors[i * 3 + 1] = 255 - (i % 255);
+			colors[i * 3 + 2] = 55;
+		}
 	}
 	//Error bad method
 	else {

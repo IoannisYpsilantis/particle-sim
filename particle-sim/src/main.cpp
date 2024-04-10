@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     unsigned int* particles_col;
     ParticleSystem* system;
     if (useCPU) {
-        system = new ParticleSystemCPU(numParticles, 0);
+        system = new ParticleSystemCPU(numParticles, 2);
     }
     else {
         //Do GPU class initialization
