@@ -16,7 +16,7 @@
 
 int main(int argc, char** argv) {
 
-    int num_particles = 1000;
+    int numParticles = 1000;
 
     bool cpu = true;
 
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     unsigned int* particles_col;
     ParticleSystem* system;
     if (cpu) {
-        system = new ParticleSystemCPU(1000, 0);
+        system = new ParticleSystemCPU(numParticles, 0);
     }
     else {
         //Do GPU class initialization
