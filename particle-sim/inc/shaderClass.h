@@ -1,11 +1,13 @@
+/*
+The shader class is responsible for initializing and activating the shaders. 
+Currently it takes in the position of the particle along with its color from two different buffers and puts it 2 dimensionally on the screen. 
+*/
+
+
 #ifndef SHADER_CLASS_H
 #define SHADER_CLASS_H
 
 #include<glad/glad.h>
-#include<string>
-#include<fstream>
-#include<sstream>
-#include<iostream>
 #include<cerrno>
 
 class Shader

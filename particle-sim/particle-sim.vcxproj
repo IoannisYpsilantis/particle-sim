@@ -11,11 +11,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\buffers.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\particleSystemCpu.cpp" />
     <ClCompile Include="src\shaderClass.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="inc\buffers.h" />
+    <ClInclude Include="inc\particleSystem.h" />
+    <ClInclude Include="inc\particleSystemCpu.h" />
     <ClInclude Include="inc\shaderClass.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

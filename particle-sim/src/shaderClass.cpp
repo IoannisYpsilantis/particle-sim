@@ -1,12 +1,17 @@
+/*
+The shader class is responsible for initializing and activating the shaders.
+Currently it takes in the position of the particle along with its color from two different buffers and puts it 2 dimensionally on the screen.
+*/
+
 #include "shaderClass.h"
 
 const char vertexShaderSource[] = { "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
+"layout (location = 0) in vec4 aPos;\n"
 "layout (location = 1) in uvec3 color;\n"
 "out vec3 vertexColor;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = vec4(aPos, 1.0);\n"
+"   gl_Position = aPos;\n"
 "   vertexColor = color / 255.0;\n"
 "}" };
 
