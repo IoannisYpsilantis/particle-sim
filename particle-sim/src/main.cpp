@@ -20,6 +20,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 const int numParticles = 1000;
 const bool useCPU = true;
 
+// Window Parameters
+const int width = 800;
+const int height = 800;
+
 int main(int argc, char** argv) {
 
     //Initialize GLFW 
@@ -27,8 +31,6 @@ int main(int argc, char** argv) {
 
     //This window is where we will view our graphics
     // (width, height, title, monitor, share)
-    int width = 800;
-    int height = 600;
     GLFWwindow* window = glfwCreateWindow(width, height, "Particle Simulation", NULL, NULL);
 
     //Check to make sure window was actually created, if not exit.
@@ -37,11 +39,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-
-
     //Make the window the context for OpenGL
     glfwMakeContextCurrent(window);
-
 
     //Load OpenGL functions
     gladLoadGL();
@@ -56,7 +55,7 @@ int main(int argc, char** argv) {
     unsigned int* particles_col;
     ParticleSystem* system;
     if (useCPU) {
-        system = new ParticleSystemCPU(numParticles, 0);
+        system = new ParticleSystemCPU(numParticles, 2);
     }
     else {
         //Do GPU class initialization
@@ -82,7 +81,8 @@ int main(int argc, char** argv) {
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
     while(!glfwWindowShouldClose(window)) {
-        glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+        //glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         //Use the shader program
