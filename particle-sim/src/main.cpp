@@ -20,6 +20,13 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 const int numParticles = 1000;
 const bool useCPU = true;
 
+// Physical parameters - mass
+float proton_mass = 1.0f; //This is in atomic mass units 1amu ~ 1.67e-27 kg.
+float electron_mass = 0.00055f;
+float mass_ratio = 1836.15267343f; //This is the ratio with uncertainty of 6.0e-11.
+
+// Physical parameters - forces
+float residual_strong_range = 3; //In fentometers (10^-15 m)
 // Window Parameters
 const int width = 800;
 const int height = 800;
