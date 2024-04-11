@@ -75,11 +75,15 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod) {
 	}
 
 }
-float* ParticleSystemCPU::getPositions() {
+float* ParticleSystemCPU::getPositions(void) {
 	return positions;
 }
 
-unsigned int* ParticleSystemCPU::getColors() {
+float* ParticleSystemCPU::getVelocities(void) {
+	return velocities;
+}
+
+unsigned int* ParticleSystemCPU::getColors(void) {
 	return colors;
 }
 
@@ -98,27 +102,12 @@ void ParticleSystemCPU::update(float timeDelta) {
 			velocities[i * 3 + 2] = -1 * velocities[i * 3 + 2];
 		}
 	}
-
-	//float temp_x = positions[0];
-	//float temp_y = positions[1];
-	//float temp_z = positions[2];
-	//float temp_a = positions[3];
-
-	//for (int i = 0; i < (p_numParticles - 1); i++) {
-	//	positions[i * 4] = positions[i * 4 + 4];
-	//	positions[i * 4 + 1] = positions[i * 4 + 5];
-	//	positions[i * 4 + 2] = positions[i * 4 + 6];
-	//	positions[i * 4 + 3] = positions[i * 4 + 7];
-	//}
-
-	//positions[(p_numParticles - 1) * 4] = temp_x;
-	//positions[(p_numParticles - 1) * 4 + 1] = temp_y;
-	//positions[(p_numParticles - 1) * 4 + 2] = temp_z;
-	//positions[(p_numParticles - 1) * 4 + 3] = temp_a;
 }
 
 ParticleSystemCPU::~ParticleSystemCPU() {
 	p_numParticles = 0;
 	delete[] positions;
 	delete[] colors;
+	delete[] velocities;
+	delete[] particleType;
 }

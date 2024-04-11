@@ -16,6 +16,8 @@ public:
 
 	float* getPositions(void);
 
+	float* getVelocities(void);
+
 	unsigned int* getColors(void);
 
 	void update(float timeDelta);
