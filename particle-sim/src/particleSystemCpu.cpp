@@ -4,17 +4,21 @@
 ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod) {
 	p_numParticles = numParticles;
 
-	//Initialize Positions array
+	// Initialize Positions array
 	int positionElementsCount = 4 * numParticles;
 	positions = new float[positionElementsCount];
 	//memset(positions, 0, positionElementsCount);
 
-	//Initialize Colors array
+	// Initialize Colors array
 	int colorElementsCount = 3 * numParticles;
 	colors = new unsigned int[colorElementsCount];
 	//memset(colors, 0, colorElementsCount);
 
-	
+	int velocityElementsCount = 3 * numParticles;
+	velocities = new float[velocityElementsCount];
+
+	// Initialize Particle Type array
+	particleType = new unsigned char[numParticles];
 
 	// Circular initialization
 	if (initMethod == 0) {
@@ -35,17 +39,34 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod) {
 	else if (initMethod == 1) {
 
 	}
-	// Random initialization
+	// Random initialization in 3 dimensions
 	else if (initMethod == 2) {
 		for (unsigned int i = 0; i < numParticles; i++) {
-			positions[i * 4] = (float)(rand() % 2000 - 1000) / 1000.0;
-			positions[i * 4 + 1] = (float)(rand() % 2000 - 1000) / 1000.0;
-			positions[i * 4 + 2] = 1.0f;
+			// Randomly initialize position in range [-1,1)
+			positions[i * 4] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+			positions[i * 4 + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+			positions[i * 4 + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
 			positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+			
+			// Randomly initializes velocity in range [-0.0025,0.0025)
+			velocities[i * 3] = ((float)(rand() % 500) - 250.0) / 100000.0;
+			velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
+			velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
 
-			colors[i * 3] = i % 255;
-			colors[i * 3 + 1] = 255 - (i % 255);
-			colors[i * 3 + 2] = 55;
+			// Generates random number (either 0, 1) with 2/3 ratio being electrons
+			particleType[i] = rand() % 3 % 2; 
+
+			// Sets color based on particle type
+			if (particleType[i]) { // If Proton
+				colors[i * 3] = 255;
+				colors[i * 3 + 1] = 0;
+				colors[i * 3 + 2] = 0;
+			}
+			else { // Else electron
+				colors[i * 3] = 0;
+				colors[i * 3 + 1] = 180;
+				colors[i * 3 + 2] = 255;
+			}
 		}
 	}
 	//Error bad method
@@ -63,22 +84,37 @@ unsigned int* ParticleSystemCPU::getColors() {
 }
 
 void ParticleSystemCPU::update(float timeDelta) {
-	float temp_x = positions[0];
-	float temp_y = positions[1];
-	float temp_z = positions[2];
-	float temp_a = positions[3];
-
-	for (int i = 0; i < (p_numParticles - 1); i++) {
-		positions[i * 4] = positions[i * 4 + 4];
-		positions[i * 4 + 1] = positions[i * 4 + 5];
-		positions[i * 4 + 2] = positions[i * 4 + 6];
-		positions[i * 4 + 3] = positions[i * 4 + 7];
+	for (int i = 0; i < p_numParticles; i++) {
+		positions[i * 4] += velocities[i * 3];
+		if (abs(positions[i * 4]) > 1) {
+			velocities[i * 3] = -1 * velocities[i * 3];
+		}
+		positions[i * 4 + 1] += velocities[i * 3 + 1];
+		if (abs(positions[i * 4 + 1]) > 1) {
+			velocities[i * 3 + 1] = -1 * velocities[i * 3 + 1];
+		}
+		positions[i * 4 + 2] += velocities[i * 3 + 2];
+		if (abs(positions[i * 4 + 2]) > 1) {
+			velocities[i * 3 + 2] = -1 * velocities[i * 3 + 2];
+		}
 	}
 
-	positions[(p_numParticles - 1) * 4] = temp_x;
-	positions[(p_numParticles - 1) * 4 + 1] = temp_y;
-	positions[(p_numParticles - 1) * 4 + 2] = temp_z;
-	positions[(p_numParticles - 1) * 4 + 3] = temp_a;
+	//float temp_x = positions[0];
+	//float temp_y = positions[1];
+	//float temp_z = positions[2];
+	//float temp_a = positions[3];
+
+	//for (int i = 0; i < (p_numParticles - 1); i++) {
+	//	positions[i * 4] = positions[i * 4 + 4];
+	//	positions[i * 4 + 1] = positions[i * 4 + 5];
+	//	positions[i * 4 + 2] = positions[i * 4 + 6];
+	//	positions[i * 4 + 3] = positions[i * 4 + 7];
+	//}
+
+	//positions[(p_numParticles - 1) * 4] = temp_x;
+	//positions[(p_numParticles - 1) * 4 + 1] = temp_y;
+	//positions[(p_numParticles - 1) * 4 + 2] = temp_z;
+	//positions[(p_numParticles - 1) * 4 + 3] = temp_a;
 }
 
 ParticleSystemCPU::~ParticleSystemCPU() {
