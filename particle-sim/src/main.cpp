@@ -1,10 +1,15 @@
 // Includes
 #include <stdio.h>
+#include <ctime>
+#include <iostream>
+
+
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <cuda.h>
+#include <cuda_runtime_api.h>
 
 #include "shaderClass.h"
 #include "buffers.h"
@@ -17,10 +22,14 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 // Environment Parameters
-const int numParticles = 1000;
+const int numParticles = 100;
 const bool useCPU = true;
-const bool render = true;
-const int max_steps = -1; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
+const bool render = false;
+const bool saveFinal = true; //Save final positions to a designated folder
+const int max_steps = 100; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
+const int seed = 42; //Seed for run, set to 1 for random generation.
+
+     
 
 // Physical parameters - mass
 float proton_mass = 1.0f; //This is in atomic mass units 1amu ~ 1.67e-27 kg.
@@ -35,7 +44,7 @@ const int width = 800;
 const int height = 800;
 
 int main(int argc, char** argv) {
-
+    
     if (render == false && max_steps < 0) {
         printf("Warning: Can only exit program via ctrl-c. This is not recommended unless testing code.\n");
     }
@@ -44,7 +53,7 @@ int main(int argc, char** argv) {
     unsigned int* particles_col;
     ParticleSystem* system;
     if (useCPU) {
-        system = new ParticleSystemCPU(numParticles, 2);
+        system = new ParticleSystemCPU(numParticles, 2, seed);
     }
     else {
         //Do GPU class initialization
@@ -95,6 +104,18 @@ int main(int argc, char** argv) {
     
 
     int steps = 0;
+    //Set up timers
+    clock_t cpu_start, cpu_end;
+    cudaEvent_t gpu_start, gpu_end;
+    float milliseconds;
+    if (useCPU) {
+        cpu_start = clock();
+    }
+    else {
+        cudaEventCreate(&gpu_start);
+        cudaEventCreate(&gpu_end);
+        cudaEventRecord(gpu_start);
+    }
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
     while (steps != max_steps && (!render || !glfwWindowShouldClose(window))) {
@@ -124,6 +145,51 @@ int main(int argc, char** argv) {
         
     }
 
+    //Time calculations
+    if (useCPU) {
+        cpu_end = clock();
+        milliseconds = (float)(cpu_end - cpu_start) / CLOCKS_PER_SEC * 1000;
+    }
+    else {
+        cudaEventRecord(gpu_end);
+        cudaEventSynchronize(gpu_end);
+        cudaEventElapsedTime(&milliseconds, gpu_start, gpu_end);
+
+        cudaEventDestroy(gpu_start);
+        cudaEventDestroy(gpu_end);
+    }
+    float it_per_sec = (float)steps * 1000 / milliseconds;
+    std::cout << "Entire simulation took " << milliseconds << " ms." << std::endl;
+    std::cout << "Time per iteration (ms): " << (milliseconds / (float)steps) << "." << std::endl;
+    std::cout << "Iterations per second: " << it_per_sec << "." << std::endl;
+
+    //Save to file (goes to data folder in the executable's directory
+    //File is called "currentTime"_"runType"_"iterations"_
+    //CurrentTime is the system time when the file was made
+    //Where run type is either CPU or GPU
+    //Iterations is the number of iterations used for this file
+    if (saveFinal) {
+        //Assumes to find a data folder in the executable's directory
+        char buf[256];
+        char CPU[4] = "CPU";
+        char GPU[4] = "GPU";
+        time_t currentTime = time(nullptr);
+        char time[20];
+        std::strftime(time, sizeof(time), "%Y-%m-%d_%H-%M-%S", std::localtime(&currentTime));
+        if (useCPU) {
+            snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, CPU, steps);
+        }
+        else {
+            snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, GPU, steps);
+        }
+        
+        system->writecurpostofile(buf);
+        
+
+
+
+    }
+    
     //We have completed so we need to clean up.
     
     if (render) {
@@ -139,7 +205,6 @@ int main(int argc, char** argv) {
         glfwDestroyWindow(window);
         glfwTerminate();
     }
-    
 
     //Delete the particleSystem
     delete system;

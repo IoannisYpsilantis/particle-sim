@@ -12,6 +12,8 @@ public:
 
 	virtual void update(float timeDelta) = 0;
 
+	virtual void writecurpostofile(char* file) = 0;
+
 protected:
 	int p_numParticles;
 

@@ -1,7 +1,9 @@
 #include "particleSystemCpu.h"
 #include <cstdlib>
+#include <iostream>
+#include <fstream>
 
-ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod) {
+ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed) {
 	p_numParticles = numParticles;
 
 	// Initialize Positions array
@@ -41,6 +43,9 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod) {
 	}
 	// Random initialization in 3 dimensions
 	else if (initMethod == 2) {
+		if (seed != -1) {
+			srand(seed);
+		}
 		for (unsigned int i = 0; i < numParticles; i++) {
 			// Randomly initialize position in range [-1,1)
 			positions[i * 4] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
@@ -101,6 +106,22 @@ void ParticleSystemCPU::update(float timeDelta) {
 		if (abs(positions[i * 4 + 2]) > 1) {
 			velocities[i * 3 + 2] = -1 * velocities[i * 3 + 2];
 		}
+	}
+}
+
+void ParticleSystemCPU::writecurpostofile(char* file) {
+	std::ofstream outfile(file);
+
+	if (outfile.is_open()) {
+		for (int i = 0; i < p_numParticles; i++) {
+			outfile << positions[i * 4] << " ";
+			outfile << positions[i * 4 + 1] << " ";
+			outfile << positions[i * 4 + 2] << " ";
+			outfile << positions[i * 4 + 3] << "\n";
+		}
+	}
+	else {
+		std::cerr << "Unable to open file: " << file << std::endl;
 	}
 }
 

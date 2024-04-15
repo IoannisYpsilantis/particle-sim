@@ -1,2 +1,5 @@
 particle-sim/x64/*
 particle-sim/.vs/*
+particle-sim/data/*
+!particle-sim/data/example.txt
+

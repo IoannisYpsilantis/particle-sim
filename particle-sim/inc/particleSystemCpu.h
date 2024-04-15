@@ -10,7 +10,7 @@
 class ParticleSystemCPU : public ParticleSystem
 {
 public:
-	ParticleSystemCPU(int numParticles, int init_method);
+	ParticleSystemCPU(int numParticles, int init_method, int seed);
 
 	~ParticleSystemCPU(void);
 
@@ -21,6 +21,8 @@ public:
 	unsigned int* getColors(void);
 
 	void update(float timeDelta);
+
+	void ParticleSystemCPU::writecurpostofile(char* file);
 
 
 protected:
