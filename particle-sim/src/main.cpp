@@ -22,11 +22,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 // Environment Parameters
-const int numParticles = 100;
+const int numParticles = 1000;
 const bool useCPU = true;
-const bool render = false;
-const bool saveFinal = true; //Save final positions to a designated folder
-const int max_steps = 100; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
+const bool render = true;
+const bool saveFinal = false; //Save final positions to a designated folder
+const int max_steps = -1; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 const int seed = 42; //Seed for run, set to 1 for random generation.
 
      
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
     while (steps != max_steps && (!render || !glfwWindowShouldClose(window))) {
-        system->update(0);
+        system->update(1e-3);
         
 
         if (render) {

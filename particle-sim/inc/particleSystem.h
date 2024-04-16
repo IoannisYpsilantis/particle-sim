@@ -21,6 +21,8 @@ protected:
 
 	unsigned int* colors;
 
+	float coulomb_scaler;
+
 };
 
 

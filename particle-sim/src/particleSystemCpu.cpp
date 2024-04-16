@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <cmath>
 
 ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed) {
 	p_numParticles = numParticles;
@@ -21,6 +22,9 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 
 	// Initialize Particle Type array
 	particleType = new unsigned char[numParticles];
+	
+	//refer to equations.ipynb to see why this value is what it is.
+	coulomb_scalar = 2.310272969e-4; //N*picometers^2
 
 	// Circular initialization
 	if (initMethod == 0) {
@@ -58,19 +62,26 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 			velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
 			velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
 
-			// Generates random number (either 0, 1) with 2/3 ratio being electrons
+			// Generates random number (either 0, 1, 2) from uniform dist
 			particleType[i] = rand() % 3 % 2; 
 
 			// Sets color based on particle type
-			if (particleType[i]) { // If Proton
+			if (particleType[i] == 0) { // If Electron
+				colors[i * 3] = 0;
+				colors[i * 3 + 1] = 180;
+				colors[i * 3 + 2] = 255;
+				
+			}
+			else if (particleType[i] == 1) { // If Proton
 				colors[i * 3] = 255;
 				colors[i * 3 + 1] = 0;
 				colors[i * 3 + 2] = 0;
 			}
-			else { // Else electron
-				colors[i * 3] = 0;
-				colors[i * 3 + 1] = 180;
-				colors[i * 3 + 2] = 255;
+			else {
+				colors[i * 3] = 80; //Else neutron
+				colors[i * 3 + 1] = 80;
+				colors[i * 3 + 2] = 80;
+
 			}
 		}
 	}
@@ -92,8 +103,56 @@ unsigned int* ParticleSystemCPU::getColors(void) {
 	return colors;
 }
 
+float square(float val) {
+	return pow(val, 2);
+}
+
 void ParticleSystemCPU::update(float timeDelta) {
 	for (int i = 0; i < p_numParticles; i++) {
+		//Update velocities
+		int part_type = particleType[i];
+		float force_x = 0.0f;
+		float force_y = 0.0f;
+		float force_z = 0.0f;
+		for (int j = 0; j < p_numParticles; j++) {
+			if (i == j) {
+				continue;
+			}
+			//float dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]) + square(positions[i + 2] - positions[j + 2]);
+			float dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]);
+			float dist = sqrt(dist_square);
+			//Natural Coloumb forces
+			if ((part_type == 0 || part_type == 1) && (particleType[j] == 0 || particleType[j] == 1)) {
+				float force = 0;
+				if (particleType[i] == particleType[j]) {
+					force = coulomb_scalar / dist_square;
+				}
+				else {
+					force = -coulomb_scalar / dist_square;
+				}
+				//Calculate net forces.
+				float dist_x = positions[i] - positions[j];
+				float dist_y = positions[i + 1] - positions[j + 1];
+				force_x += force * dist_x / dist;
+				force_y += force * dist_y / dist;
+				
+			}
+
+		}
+		//Update velocities 
+		if (particleType[i] == 0) {
+			velocities[i] += force_x * 1.09776e30 * 1e-12 * timeDelta;
+			velocities[i + 1] += force_y * 1.09776e30 * 1e-12 * timeDelta;
+			velocities[i + 2] += force_z * 1.09776e30 * 1e-12 * timeDelta;
+		}
+		else {
+			velocities[i] += force_x * 5.978638e26 * 1e-12 *timeDelta;
+			velocities[i + 1] += force_y * 5.978638e26 * 1e-12 * timeDelta;
+			velocities[i + 2] += force_z * 5.978638e26 * 1e-12 * timeDelta;
+		}
+
+
+		//Update positions from velocities
 		positions[i * 4] += velocities[i * 3];
 		if (abs(positions[i * 4]) > 1) {
 			velocities[i * 3] = -1 * velocities[i * 3];
