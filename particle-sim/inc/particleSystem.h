@@ -22,6 +22,8 @@ protected:
 	unsigned int* colors;
 
 	float coulomb_scaler;
+	float yukawa_scalar;
+	float yukawa_radius;
 
 };
 

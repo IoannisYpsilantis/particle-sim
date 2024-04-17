@@ -4,6 +4,10 @@
 #include <fstream>
 #include <cmath>
 
+float inv_masses[] = { 1.09776e30, 5.978638e26, 5.978638e26 };
+float charges[] = { -1, 1, 0 };
+
+
 ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed) {
 	p_numParticles = numParticles;
 
@@ -23,8 +27,11 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 	// Initialize Particle Type array
 	particleType = new unsigned char[numParticles];
 	
-	//refer to equations.ipynb to see why this value is what it is.
+	//refer to equations.ipynb to see why these value is what it is.
 	coulomb_scalar = 2.310272969e-4; //N*picometers^2
+	yukawa_scalar = 1.9692204e-3;    //Experimentally obtained
+	yukawa_radius = 1.4e-3;			 //Radius of strength.
+
 
 	// Circular initialization
 	if (initMethod == 0) {
@@ -58,12 +65,16 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 			positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 			
 			// Randomly initializes velocity in range [-0.0025,0.0025)
-			velocities[i * 3] = ((float)(rand() % 500) - 250.0) / 100000.0;
-			velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
-			velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
+			//velocities[i * 3] = ((float)(rand() % 500) - 250.0) / 100000.0;
+			//velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
+			//velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
+			velocities[i * 3] = 0;
+			velocities[i * 3 + 1] = 0;
+			velocities[i * 3 + 2] = 0;
 
 			// Generates random number (either 0, 1, 2) from uniform dist
-			particleType[i] = rand() % 3 % 2; 
+			//particleType[i] = rand() % 3 % 2; 
+			particleType[i] = rand() % 3;
 
 			// Sets color based on particle type
 			if (particleType[i] == 0) { // If Electron
@@ -78,9 +89,9 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 				colors[i * 3 + 2] = 0;
 			}
 			else {
-				colors[i * 3] = 80; //Else neutron
-				colors[i * 3 + 1] = 80;
-				colors[i * 3 + 2] = 80;
+				colors[i * 3] = 255; //Else neutron
+				colors[i * 3 + 1] = 0;
+				colors[i * 3 + 2] = 180;
 
 			}
 		}
@@ -121,35 +132,27 @@ void ParticleSystemCPU::update(float timeDelta) {
 			//float dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]) + square(positions[i + 2] - positions[j + 2]);
 			float dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]);
 			float dist = sqrt(dist_square);
-			//Natural Coloumb forces
-			if ((part_type == 0 || part_type == 1) && (particleType[j] == 0 || particleType[j] == 1)) {
-				float force = 0;
-				if (particleType[i] == particleType[j]) {
-					force = coulomb_scalar / dist_square;
-				}
-				else {
-					force = -coulomb_scalar / dist_square;
-				}
-				//Calculate net forces.
-				float dist_x = positions[i] - positions[j];
-				float dist_y = positions[i + 1] - positions[j + 1];
+			//Natural Coloumb force
+			float force = coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
+			float dist_x = positions[i] - positions[j];
+			float dist_y = positions[i + 1] - positions[j + 1];
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+
+			//Strong Forces
+			//P-N close attraction N-N close attraction 
+			if (part_type != 0 && particleType[j] != 0) {
+				force = yukawa_scalar * exp(dist / yukawa_radius) / dist;
 				force_x += force * dist_x / dist;
 				force_y += force * dist_y / dist;
-				
 			}
+
 
 		}
 		//Update velocities 
-		if (particleType[i] == 0) {
-			velocities[i] += force_x * 1.09776e30 * 1e-12 * timeDelta;
-			velocities[i + 1] += force_y * 1.09776e30 * 1e-12 * timeDelta;
-			velocities[i + 2] += force_z * 1.09776e30 * 1e-12 * timeDelta;
-		}
-		else {
-			velocities[i] += force_x * 5.978638e26 * 1e-12 *timeDelta;
-			velocities[i + 1] += force_y * 5.978638e26 * 1e-12 * timeDelta;
-			velocities[i + 2] += force_z * 5.978638e26 * 1e-12 * timeDelta;
-		}
+		velocities[i] += force_x * inv_masses[part_type] * 1e-12 * timeDelta;
+		velocities[i + 1] += force_y * inv_masses[part_type] * 1e-12 * timeDelta;
+		velocities[i + 2] += force_z * inv_masses[part_type] * 1e-12 * timeDelta;
 
 
 		//Update positions from velocities
