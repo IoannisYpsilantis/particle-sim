@@ -4,7 +4,7 @@
 #include <fstream>
 #include <cmath>
 
-float inv_masses[] = { 1.09776e30, 5.978638e26, 5.978638e26 };
+double inv_masses[] = { 1.09776e30, 5.978638e26, 5.978638e26 };
 float charges[] = { -1, 1, 0 };
 
 
@@ -28,9 +28,10 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 	particleType = new unsigned char[numParticles];
 	
 	//refer to equations.ipynb to see why these value is what it is.
-	coulomb_scalar = 2.310272969e-4; //N*picometers^2
+	coulomb_scalar = 2.310272969e-4; //N*nanometers^2
 	yukawa_scalar = 1.9692204e-3;    //Experimentally obtained
 	yukawa_radius = 1.4e-3;			 //Radius of strength.
+	yukawa_cutoff = 1e-3;          //Sweet spot. (Strong force likes to be between 0.8 and 1.4 fm.
 
 
 	// Circular initialization
@@ -65,12 +66,9 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 			positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 			
 			// Randomly initializes velocity in range [-0.0025,0.0025)
-			//velocities[i * 3] = ((float)(rand() % 500) - 250.0) / 100000.0;
-			//velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
-			//velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
-			velocities[i * 3] = 0;
-			velocities[i * 3 + 1] = 0;
-			velocities[i * 3 + 2] = 0;
+			velocities[i * 3] = ((float)(rand() % 500) - 250.0) / 100000.0;
+			velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
+			velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
 
 			// Generates random number (either 0, 1, 2) from uniform dist
 			//particleType[i] = rand() % 3 % 2; 
@@ -119,12 +117,13 @@ float square(float val) {
 }
 
 void ParticleSystemCPU::update(float timeDelta) {
+	std::cout << velocities[0];
 	for (int i = 0; i < p_numParticles; i++) {
 		//Update velocities
 		int part_type = particleType[i];
-		float force_x = 0.0f;
-		float force_y = 0.0f;
-		float force_z = 0.0f;
+		double force_x = 0.0f;
+		double force_y = 0.0f;
+		double force_z = 0.0f;
 		for (int j = 0; j < p_numParticles; j++) {
 			if (i == j) {
 				continue;
@@ -133,19 +132,19 @@ void ParticleSystemCPU::update(float timeDelta) {
 			float dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]);
 			float dist = sqrt(dist_square);
 			//Natural Coloumb force
-			float force = coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
-			float dist_x = positions[i] - positions[j];
-			float dist_y = positions[i + 1] - positions[j + 1];
+			double force = (double) coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
+			double dist_x = (double) positions[i] - positions[j];
+			double dist_y = (double) positions[i + 1] - positions[j + 1];
 			force_x += force * dist_x / dist;
 			force_y += force * dist_y / dist;
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
-			if (part_type != 0 && particleType[j] != 0) {
-				force = yukawa_scalar * exp(dist / yukawa_radius) / dist;
-				force_x += force * dist_x / dist;
-				force_y += force * dist_y / dist;
-			}
+			//if (part_type != 0 && particleType[j] != 0 && dist > yukawa_cutoff) {
+			//	force = yukawa_scalar * exp(dist / yukawa_radius) / dist;
+			//	force_x += force * dist_x / dist;
+			//	force_y += force * dist_y / dist;
+			//}
 
 
 		}

@@ -30,6 +30,7 @@ protected:
 	float coulomb_scalar;
 	float yukawa_scalar;
 	float yukawa_radius;
+	float yukawa_cutoff;
 
 	// Particle Data
 	float* positions; // 1D Array containing spacial data of each particle (positionElementsCount * numParticles)

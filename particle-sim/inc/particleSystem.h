@@ -24,6 +24,7 @@ protected:
 	float coulomb_scaler;
 	float yukawa_scalar;
 	float yukawa_radius;
+	float yukawa_cutoff;
 
 };
 

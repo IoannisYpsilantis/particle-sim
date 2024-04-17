@@ -22,7 +22,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 // Environment Parameters
-const int numParticles = 5000;
+const int numParticles = 1000;
 const bool useCPU = true;
 const bool render = true;
 const bool saveFinal = false; //Save final positions to a designated folder
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
     while (steps != max_steps && (!render || !glfwWindowShouldClose(window))) {
-        system->update(1);
+        system->update(1e-15);
         
 
         if (render) {
