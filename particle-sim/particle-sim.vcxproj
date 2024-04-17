@@ -21,7 +21,11 @@
     <ClInclude Include="inc\buffers.h" />
     <ClInclude Include="inc\particleSystem.h" />
     <ClInclude Include="inc\particleSystemCpu.h" />
+    <ClInclude Include="inc\particleSystemGpu.h" />
     <ClInclude Include="inc\shaderClass.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\particleSystemGpu.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0535F2C8-B8E3-46C1-B2B0-9BC0381DC94F}</ProjectGuid>

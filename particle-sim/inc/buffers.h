@@ -21,6 +21,14 @@ public:
 
 	void updateColors(unsigned int* colors, int numParticles);
 
+	void mapPositions(float* d_positions);
+
+	void mapColors(unsigned int* colors);
+
+	void unmapPositions();
+
+	void unmapColors();
+
 	void Delete();
 
 };

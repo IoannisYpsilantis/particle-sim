@@ -4,6 +4,9 @@ To this extent it houses both the VAO and VBO.
 */
 
 #include "buffers.h"
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
 
 Buffer::Buffer(float* positions, unsigned int* colors, int numParticles) {
 
@@ -42,6 +45,24 @@ void Buffer::updateColors(unsigned int* colors, int numParticles) {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 }
+
+void Buffer::mapPositions(float * d_positions) {
+	cudaGLMapBufferObject((void**)&d_positions, positionBuffer);
+}
+
+void Buffer::mapColors(unsigned int* colors) {
+	cudaGLMapBufferObject((void**)&colors, colorBuffer);
+}
+
+void Buffer::unmapPositions() {
+	cudaGLUnmapBufferObject(positionBuffer);
+}
+
+void Buffer::unmapColors() {
+	cudaGLUnmapBufferObject(colorBuffer);
+}
+
+
 
 void Buffer::Delete() {
 	glDeleteVertexArrays(1, &ID);

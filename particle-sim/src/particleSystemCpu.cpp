@@ -28,8 +28,8 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 	particleType = new unsigned char[numParticles];
 	
 	//refer to equations.ipynb to see why these value is what it is.
-	coulomb_scalar = 2.310272969e-4; //N*nanometers^2
-	yukawa_scalar = 1.9692204e-3;    //Experimentally obtained
+	coulomb_scalar = 2.310272969e-10; //N*nanometers^2
+	yukawa_scalar = 1.9692204e-9;    //Experimentally obtained
 	yukawa_radius = 1.4e-3;			 //Radius of strength.
 	yukawa_cutoff = 1e-3;          //Sweet spot. (Strong force likes to be between 0.8 and 1.4 fm.
 
@@ -125,12 +125,14 @@ void ParticleSystemCPU::update(float timeDelta) {
 		double force_y = 0.0f;
 		double force_z = 0.0f;
 		for (int j = 0; j < p_numParticles; j++) {
-			if (i == j) {
-				continue;
-			}
+			
 			//float dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]) + square(positions[i + 2] - positions[j + 2]);
 			float dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]);
 			float dist = sqrt(dist_square);
+			if (i == j || dist < yukawa_cutoff) {
+				continue;
+			}
+			
 			//Natural Coloumb force
 			double force = (double) coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
 			double dist_x = (double) positions[i] - positions[j];
@@ -140,18 +142,18 @@ void ParticleSystemCPU::update(float timeDelta) {
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
-			//if (part_type != 0 && particleType[j] != 0 && dist > yukawa_cutoff) {
-			//	force = yukawa_scalar * exp(dist / yukawa_radius) / dist;
-			//	force_x += force * dist_x / dist;
-			//	force_y += force * dist_y / dist;
-			//}
+			if (part_type != 0 && particleType[j] != 0) {
+				force = yukawa_scalar * exp(dist / yukawa_radius) / dist;
+				force_x += force * dist_x / dist;
+				force_y += force * dist_y / dist;
+			}
 
 
 		}
 		//Update velocities 
-		velocities[i] += force_x * inv_masses[part_type] * 1e-12 * timeDelta;
-		velocities[i + 1] += force_y * inv_masses[part_type] * 1e-12 * timeDelta;
-		velocities[i + 2] += force_z * inv_masses[part_type] * 1e-12 * timeDelta;
+		velocities[i] += force_x * inv_masses[part_type] * 1e-9 * timeDelta;
+		velocities[i + 1] += force_y * inv_masses[part_type] * 1e-9 * timeDelta;
+		velocities[i + 2] += force_z * inv_masses[part_type] * 1e-9 * timeDelta;
 
 
 		//Update positions from velocities

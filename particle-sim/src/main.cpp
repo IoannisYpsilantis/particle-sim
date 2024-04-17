@@ -15,6 +15,7 @@
 #include "buffers.h"
 #include "particleSystem.h"
 #include "particleSystemCpu.h"
+#include "particleSystemGpu.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -22,8 +23,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 // Environment Parameters
-const int numParticles = 1000;
-const bool useCPU = true;
+const int numParticles = 100;
+const bool useCPU = false;
 const bool render = true;
 const bool saveFinal = false; //Save final positions to a designated folder
 const int max_steps = -1; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
@@ -52,16 +53,19 @@ int main(int argc, char** argv) {
     float* particles_pos;
     unsigned int* particles_col;
     ParticleSystem* system;
-    if (useCPU) {
-        system = new ParticleSystemCPU(numParticles, 2, seed);
-    }
-    else {
-        //Do GPU class initialization
-    }
 
     GLFWwindow* window;
     Shader* shaderProgram;
     Buffer* buffers;
+
+    if (useCPU) {
+        system = new ParticleSystemCPU(numParticles, 2, seed);
+    }
+    else {
+        system = new ParticleSystemGPU(numParticles, 2, seed, buffers);
+    }
+
+    
 
     if (render) {
         //Initialize GLFW 
@@ -137,8 +141,10 @@ int main(int argc, char** argv) {
 
             //We want to draw the points onto the screen:
             glfwPollEvents();
-
-            buffers->updatePositions(particles_pos, 1000);
+            if (useCPU) {
+                buffers->updatePositions(particles_pos, numParticles);
+            }
+            
         }
 
         steps++;
