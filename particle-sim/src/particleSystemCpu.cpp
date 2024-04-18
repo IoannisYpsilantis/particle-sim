@@ -6,12 +6,14 @@
 
 #include "buffers.h"
 
+
 double inv_masses[] = { 1.09776e30, 5.978638e26, 5.978638e26 };
 float charges[] = { -1, 1, 0 };
 
 
-ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed) {
+ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed, bool render) {
 	p_numParticles = numParticles;
+	p_render = render;
 
 	// Initialize Positions array
 	int positionElementsCount = 4 * numParticles;
@@ -100,13 +102,31 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 	else {
 
 	}
+	if (render) {
+		glGenVertexArrays(1, &VAO);
+
+		glBindVertexArray(VAO);
+
+		glGenBuffers(1, &positionBuffer);
+		glGenBuffers(1, &colorBuffer);
+
+		glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * numParticles, positions, GL_STREAM_DRAW);
+		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int) * 3 * numParticles, colors, GL_STREAM_DRAW);
+		glVertexAttribIPointer(1, 3, GL_UNSIGNED_INT, 0, (void*)0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+
+		shaderProgram = new Shader();
+	}
 
 }
-
-void ParticleSystemCPU::assignBuffer(Buffer* buffer) {
-	std::cout << "This does nothing!" << std::endl;
-}
-
 
 
 float* ParticleSystemCPU::getPositions(void) {
@@ -197,10 +217,38 @@ void ParticleSystemCPU::writecurpostofile(char* file) {
 	}
 }
 
+void ParticleSystemCPU::display() {
+	//If render wasn't specified this function does nothing. The code shouldn't allow it but it's a good check
+	if (p_render) {
+		//Update the positions
+		glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * p_numParticles, positions, GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		shaderProgram->Activate();
+
+		glDrawArrays(GL_POINTS, 0, p_numParticles);
+
+
+
+	}
+}
+
 ParticleSystemCPU::~ParticleSystemCPU() {
 	p_numParticles = 0;
 	delete[] positions;
 	delete[] colors;
 	delete[] velocities;
 	delete[] particleType;
+
+	if (p_render) {
+		delete shaderProgram;
+		glDeleteVertexArrays(1, &VAO);
+		glDeleteBuffers(1, &positionBuffer);
+		glDeleteBuffers(1, &colorBuffer);
+
+	}
 }

@@ -23,11 +23,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 // Environment Parameters
-const int numParticles = 100;
-const bool useCPU = true;
+const int numParticles = 1000;
+const bool useCPU = false;
 const bool render = true;
-const bool saveFinal = true; //Save final positions to a designated folder
-const int max_steps = -1; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
+const bool saveFinal = false; //Save final positions to a designated folder
+const int max_steps = 1000; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 const int seed = 42; //Seed for run, set to 1 for random generation.
 
      
@@ -58,15 +58,6 @@ int main(int argc, char** argv) {
     Shader* shaderProgram;
     Buffer* buffers;
 
-    if (useCPU) {
-        system = new ParticleSystemCPU(numParticles, 2, seed);
-    }
-    else {
-        system = new ParticleSystemGPU(numParticles, 2, seed, render);
-    }
-
-    
-
     if (render) {
         //Initialize GLFW 
         glfwInit();
@@ -93,20 +84,18 @@ int main(int argc, char** argv) {
         glViewport(0, 0, width, height);
 
         glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-
-
-        particles_pos = system->getPositions();
-        particles_col = system->getColors();
-
-        shaderProgram = new Shader();
-
-        buffers = new Buffer(particles_pos, particles_col, 1000);
-
-        if (!useCPU) {
-            system->assignBuffer(buffers);
-        }
     }
+
+    if (useCPU) {
+        system = new ParticleSystemCPU(numParticles, 2, seed, render);
+    }
+    else {
+        system = new ParticleSystemGPU(numParticles, 2, seed, render);
+    }
+
+    
+
+    
     
 
     
@@ -131,23 +120,13 @@ int main(int argc, char** argv) {
         
 
         if (render) {
-            //glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            //Use the shader program
-            shaderProgram->Activate();
-
-            glDrawArrays(GL_POINTS, 0, 1000);
+            system->display();
 
             //Swap the buffers so we see the new frame generated.
             glfwSwapBuffers(window);
 
             //We want to draw the points onto the screen:
             glfwPollEvents();
-            if (useCPU) {
-                buffers->updatePositions(particles_pos, numParticles);
-            }
             
         }
 
@@ -164,9 +143,6 @@ int main(int argc, char** argv) {
         cudaEventRecord(gpu_end);
         cudaEventSynchronize(gpu_end);
         cudaEventElapsedTime(&milliseconds, gpu_start, gpu_end);
-
-        cudaEventDestroy(gpu_start);
-        cudaEventDestroy(gpu_end);
     }
     float it_per_sec = (float)steps * 1000 / milliseconds;
     std::cout << "Entire simulation took " << milliseconds << " ms." << std::endl;
@@ -203,17 +179,14 @@ int main(int argc, char** argv) {
     //We have completed so we need to clean up.
     
     if (render) {
-        //Delete the VBO and VAO
-        buffers->Delete();
-        delete buffers;
-
-        //Delete the shader program
-        shaderProgram->Delete();
-        delete shaderProgram;
-
         //Terminate GLFW
         glfwDestroyWindow(window);
         glfwTerminate();
+    }
+
+    if (!useCPU) {
+        cudaEventDestroy(gpu_start);
+        cudaEventDestroy(gpu_end);
     }
 
     //Delete the particleSystem
