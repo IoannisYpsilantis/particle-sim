@@ -8,9 +8,11 @@
 class ParticleSystemGPU : public ParticleSystem
 {
 public:
-	ParticleSystemGPU(int numParticles, int init_method, int seed, Buffer* buffer);
+	ParticleSystemGPU(int numParticles, int init_method, int seed, bool render);
 
 	~ParticleSystemGPU(void);
+
+	void assignBuffer(Buffer* buffer);
 
 	float* getPositions(void);
 
@@ -46,6 +48,7 @@ protected:
 	unsigned char* d_particleType;
 
 	Buffer* p_buffer;
+	bool p_render;
 
 
 };

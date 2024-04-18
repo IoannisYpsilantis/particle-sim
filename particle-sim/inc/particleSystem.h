@@ -1,6 +1,8 @@
 #ifndef PARTICLESYSTEM_H
 #define PARTICLESYSTEM_H
 
+#include "buffers.h"
+
 class ParticleSystem {
 public:
 
@@ -13,6 +15,8 @@ public:
 	virtual void update(float timeDelta) = 0;
 
 	virtual void writecurpostofile(char* file) = 0;
+
+	virtual void assignBuffer(Buffer* buffer) = 0;
 
 protected:
 	int p_numParticles;

@@ -24,9 +24,9 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 // Environment Parameters
 const int numParticles = 100;
-const bool useCPU = false;
+const bool useCPU = true;
 const bool render = true;
-const bool saveFinal = false; //Save final positions to a designated folder
+const bool saveFinal = true; //Save final positions to a designated folder
 const int max_steps = -1; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 const int seed = 42; //Seed for run, set to 1 for random generation.
 
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
         system = new ParticleSystemCPU(numParticles, 2, seed);
     }
     else {
-        system = new ParticleSystemGPU(numParticles, 2, seed, buffers);
+        system = new ParticleSystemGPU(numParticles, 2, seed, render);
     }
 
     
@@ -102,6 +102,10 @@ int main(int argc, char** argv) {
         shaderProgram = new Shader();
 
         buffers = new Buffer(particles_pos, particles_col, 1000);
+
+        if (!useCPU) {
+            system->assignBuffer(buffers);
+        }
     }
     
 

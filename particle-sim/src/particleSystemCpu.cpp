@@ -4,6 +4,8 @@
 #include <fstream>
 #include <cmath>
 
+#include "buffers.h"
+
 double inv_masses[] = { 1.09776e30, 5.978638e26, 5.978638e26 };
 float charges[] = { -1, 1, 0 };
 
@@ -100,6 +102,13 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 	}
 
 }
+
+void ParticleSystemCPU::assignBuffer(Buffer* buffer) {
+	std::cout << "This does nothing!" << std::endl;
+}
+
+
+
 float* ParticleSystemCPU::getPositions(void) {
 	return positions;
 }

@@ -24,6 +24,8 @@ public:
 
 	void writecurpostofile(char* file);
 
+	void assignBuffer(Buffer* buffer);
+
 
 protected:
 	int p_numParticles;
