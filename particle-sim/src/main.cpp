@@ -75,17 +75,17 @@ int main(int argc, char** argv) {
 #endif
 
 #if (GPU_ENABLE)
-    system = new ParticleSystemGPU(numParticles, 2, seed);
+    system = new ParticleSystemGPU(numParticles, systemInitType, seed);
     cudaEventCreate(&gpu_start);
     cudaEventCreate(&gpu_end);
     cudaEventRecord(gpu_start);
 #else
-    system = new ParticleSystemCPU(numParticles, 2, seed);
+    system = new ParticleSystemCPU(numParticles, systemInitType, seed);
     cpu_start = clock();
 #endif
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
-    while (steps < max_steps) {
+    while (steps != max_steps) {
         system->update(1e-15);
 
         steps++;

@@ -20,7 +20,8 @@ constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 
 // Environment Parameters
 constexpr int numParticles = 1000;
-constexpr int max_steps = 1000; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
+constexpr int systemInitType = 2;
+constexpr int max_steps = -1; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 constexpr int seed = 42; //Seed for run, set to 1 for random generation.
 
 // Physical parameters - mass

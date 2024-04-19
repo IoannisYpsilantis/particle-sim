@@ -238,7 +238,19 @@ void ParticleSystemGPU::update(float timeDelta) {
 #endif
 		update_naive<<<gridSize, blockSize>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
 	
-		std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
+		//std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
+
+		cudaError_t cudaStatusFlag = cudaGetLastError();
+		if (cudaStatusFlag != cudaSuccess) {
+			std::cerr << "Kernel failed: " << cudaGetErrorString(cudaStatusFlag) << std::endl;
+
+			// Do cudaFree here
+
+			//return false;
+
+			// Should probably make this function return a boolean which indicates success
+			// Stop sim if error encountered
+		}
 
 		cudaEventRecord(event);
 
