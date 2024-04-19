@@ -1,108 +1,85 @@
-#include "particleSystemCpu.h"
-#include <cstdlib>
-#include <iostream>
-#include <fstream>
-#include <cmath>
+#include <particleSystemCpu.h>
 
-#include "buffers.h"
+ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed) {
+		p_numParticles = numParticles;
 
+		// Initialize Positions array
+		int positionElementsCount = 4 * numParticles;
+		positions = new float[positionElementsCount];
 
-double inv_masses[] = { 1.09776e30, 5.978638e26, 5.978638e26 };
-float charges[] = { -1, 1, 0 };
+		// Initialize Colors array
+		int colorElementsCount = 3 * numParticles;
+		colors = new unsigned int[colorElementsCount];
 
+		int velocityElementsCount = 3 * numParticles;
+		velocities = new float[velocityElementsCount];
 
-ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed, bool render) {
-	p_numParticles = numParticles;
-	p_render = render;
-
-	// Initialize Positions array
-	int positionElementsCount = 4 * numParticles;
-	positions = new float[positionElementsCount];
-	//memset(positions, 0, positionElementsCount);
-
-	// Initialize Colors array
-	int colorElementsCount = 3 * numParticles;
-	colors = new unsigned int[colorElementsCount];
-	//memset(colors, 0, colorElementsCount);
-
-	int velocityElementsCount = 3 * numParticles;
-	velocities = new float[velocityElementsCount];
-
-	// Initialize Particle Type array
-	particleType = new unsigned char[numParticles];
-	
-	//refer to equations.ipynb to see why these value is what it is.
-	coulomb_scalar = 2.310272969e-10; //N*nanometers^2
-	yukawa_scalar = 1.9692204e-9;    //Experimentally obtained
-	yukawa_radius = 1.4e-3;			 //Radius of strength.
-	yukawa_cutoff = 1e-3;          //Sweet spot. (Strong force likes to be between 0.8 and 1.4 fm.
+		// Initialize Particle Type array
+		particleType = new unsigned char[numParticles];
 
 
-	// Circular initialization
-	if (initMethod == 0) {
-		for (unsigned int i = 0; i < numParticles; i++) {
-			float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2.0 * 3.1415); // Ensure floating-point division
-			positions[i * 4] = (float)cos(theta);
-			positions[i * 4 + 1] = (float)sin(theta);
-			positions[i * 4 + 2] = 1.0f;
-			positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+		// Circular initialization
+		if (initMethod == 0) {
+			for (unsigned int i = 0; i < numParticles; i++) {
+				float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2.0 * 3.1415); // Ensure floating-point division
+				positions[i * 4] = (float)cos(theta);
+				positions[i * 4 + 1] = (float)sin(theta);
+				positions[i * 4 + 2] = 1.0f;
+				positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 
-			colors[i * 3] = i % 255;
-			colors[i * 3 + 1] = 255 - (i % 255);
-			colors[i * 3 + 2] = 55;
+				colors[i * 3] = i % 255;
+				colors[i * 3 + 1] = 255 - (i % 255);
+				colors[i * 3 + 2] = 55;
+			}
+
 		}
+		//Read from a file
+		else if (initMethod == 1) {
 
-	}
-	//Read from a file
-	else if (initMethod == 1) {
-
-	}
-	// Random initialization in 3 dimensions
-	else if (initMethod == 2) {
-		if (seed != -1) {
-			srand(seed);
 		}
-		for (unsigned int i = 0; i < numParticles; i++) {
-			// Randomly initialize position in range [-1,1)
-			positions[i * 4] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-			positions[i * 4 + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-			positions[i * 4 + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-			positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+		// Random initialization in 3 dimensions
+		else if (initMethod == 2) {
+				if (seed != -1) {
+						srand(seed);
+				}
+				for (unsigned int i = 0; i < numParticles; i++) {
+						// Randomly initialize position in range [-1,1)
+						positions[i * 4] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4 + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4 + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 			
-			// Randomly initializes velocity in range [-0.0025,0.0025)
-			velocities[i * 3] = ((float)(rand() % 500) - 250.0) / 100000.0;
-			velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
-			velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
+						// Randomly initializes velocity in range [-0.0025,0.0025)
+						velocities[i * 3] = ((float)(rand() % 500) - 250.0) / 100000.0;
+						velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
+						velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
 
-			// Generates random number (either 0, 1, 2) from uniform dist
-			//particleType[i] = rand() % 3 % 2; 
-			particleType[i] = rand() % 3;
+						// Generates random number (either 0, 1, 2) from uniform dist
+						particleType[i] = rand() % 3;
 
-			// Sets color based on particle type
-			if (particleType[i] == 0) { // If Electron
-				colors[i * 3] = 0;
-				colors[i * 3 + 1] = 180;
-				colors[i * 3 + 2] = 255;
-				
-			}
-			else if (particleType[i] == 1) { // If Proton
-				colors[i * 3] = 255;
-				colors[i * 3 + 1] = 0;
-				colors[i * 3 + 2] = 0;
-			}
-			else {
-				colors[i * 3] = 255; //Else neutron
-				colors[i * 3 + 1] = 0;
-				colors[i * 3 + 2] = 180;
-
-			}
+						// Sets color based on particle type
+						if (particleType[i] == 0) { // If Electron
+								colors[i * 3] = ELECTRON_COLOR[0];
+								colors[i * 3 + 1] = ELECTRON_COLOR[1];
+								colors[i * 3 + 2] = ELECTRON_COLOR[2];
+						}
+						else if (particleType[i] == 1) { // If Proton
+								colors[i * 3] = PROTON_COLOR[0];
+								colors[i * 3 + 1] = PROTON_COLOR[1];
+								colors[i * 3 + 2] = PROTON_COLOR[2];
+						}
+						else {
+								colors[i * 3] = NEUTRON_COLOR[0]; //Else neutron
+								colors[i * 3 + 1] = NEUTRON_COLOR[1];
+								colors[i * 3 + 2] = NEUTRON_COLOR[2];
+						}
+				}
 		}
-	}
-	//Error bad method
-	else {
-
-	}
-	if (render) {
+		//Error bad method
+		else {
+				std::cerr << "Bad Initialization";
+		}
+#if (RENDER_ENABLE)
 		glGenVertexArrays(1, &VAO);
 
 		glBindVertexArray(VAO);
@@ -124,10 +101,8 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed,
 		glEnableVertexAttribArray(1);
 
 		shaderProgram = new Shader();
-	}
-
+#endif
 }
-
 
 float* ParticleSystemCPU::getPositions(void) {
 	return positions;
@@ -219,7 +194,7 @@ void ParticleSystemCPU::writecurpostofile(char* file) {
 
 void ParticleSystemCPU::display() {
 	//If render wasn't specified this function does nothing. The code shouldn't allow it but it's a good check
-	if (p_render) {
+#if (RENDER_ENABLE)
 		//Update the positions
 		glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * p_numParticles, positions, GL_STATIC_DRAW);
@@ -231,10 +206,7 @@ void ParticleSystemCPU::display() {
 		shaderProgram->Activate();
 
 		glDrawArrays(GL_POINTS, 0, p_numParticles);
-
-
-
-	}
+#endif
 }
 
 ParticleSystemCPU::~ParticleSystemCPU() {
@@ -244,11 +216,10 @@ ParticleSystemCPU::~ParticleSystemCPU() {
 	delete[] velocities;
 	delete[] particleType;
 
-	if (p_render) {
+#if (RENDER_ENABLE)
 		delete shaderProgram;
 		glDeleteVertexArrays(1, &VAO);
 		glDeleteBuffers(1, &positionBuffer);
 		glDeleteBuffers(1, &colorBuffer);
-
-	}
+#endif
 }

@@ -3,7 +3,7 @@ The shader class is responsible for initializing and activating the shaders.
 Currently it takes in the position of the particle along with its color from two different buffers and puts it 2 dimensionally on the screen.
 */
 
-#include "shaderClass.h"
+#include <shaderClass.h>
 
 const char vertexShaderSource[] = { "#version 330 core\n"
 "layout (location = 0) in vec4 aPos;\n"
@@ -74,7 +74,3 @@ void Shader::Delete()
 {
 	glDeleteProgram(ID);
 }
-
-
-
-

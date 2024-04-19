@@ -62,8 +62,6 @@ void Buffer::unmapColors() {
 	cudaGLUnmapBufferObject(colorBuffer);
 }
 
-
-
 void Buffer::Delete() {
 	glDeleteVertexArrays(1, &ID);
 	glDeleteBuffers(1, &positionBuffer);

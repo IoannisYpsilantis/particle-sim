@@ -8,7 +8,6 @@ To this extent it houses both the VAO and VBO.
 
 #include<glad/glad.h>
 
-
 class Buffer
 {
 public:
@@ -32,16 +31,5 @@ public:
 	void Delete();
 
 };
-
-
-
-
-
-
-
-
-
-
-
 
 #endif

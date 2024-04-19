@@ -1,8 +1,12 @@
 #ifndef PARTICLESYSTEM_H
 #define PARTICLESYSTEM_H
 
-#include "shaderClass.h"
-#include<glad/glad.h>
+// Visualization Includes
+#include <glad/glad.h>
+
+//Program Includes
+#include <common.h>
+#include <shaderClass.h>
 
 class ParticleSystem {
 public:
@@ -19,32 +23,24 @@ public:
 	
 	virtual void display() = 0;
 
-	
-
 protected:
 	
 	int p_numParticles;
-	bool p_render;
 
-	//Necessary buffers
-	float* positions;
+	// Particle Data
+	float* positions; // 1D Array containing spacial data of each particle (positionElementsCount * numParticles)
+	float* velocities; // 1D Array containing velocity data of each particle (velocityElementsCount * numParticles)
+	unsigned int* colors; // 1D Array containing RGB data of each particle (colorElementsCount * numParticles)
+	unsigned char* particleType; // 1D Array which denotes particle type (0 = Electron; 1 = Proton, 2 = Neutron)
 
-	unsigned int* colors;
-
+#if (RENDER_ENABLE)
 	//Shader buffers
 	GLuint VAO;
 	GLuint positionBuffer;
 	GLuint colorBuffer;
 
 	Shader* shaderProgram;
-
-	//Necessary constants
-	float coulomb_scaler;
-	float yukawa_scalar;
-	float yukawa_radius;
-	float yukawa_cutoff;
-
+#endif
 };
-
 
 #endif

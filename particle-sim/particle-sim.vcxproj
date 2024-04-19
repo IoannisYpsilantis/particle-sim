@@ -19,6 +19,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\buffers.h" />
+    <ClInclude Include="inc\common.h" />
     <ClInclude Include="inc\particleSystem.h" />
     <ClInclude Include="inc\particleSystemCpu.h" />
     <ClInclude Include="inc\particleSystemGpu.h" />

@@ -1,197 +1,164 @@
-// Includes
+// Standard Library Includes
 #include <stdio.h>
 #include <ctime>
 #include <iostream>
 
+// Program Includes
+#include <common.h>
+#include <shaderClass.h>
+#include <buffers.h>
+#include <particleSystem.h>
+#include <particleSystemCpu.h>
+#include <particleSystemGpu.h>
 
-
+// Visualization Includes
+#if (RENDER_ENABLE)
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height){
+  glViewport(0, 0, width, height);
+}
+#endif
+
+#if (GPU_ENABLE)
+// GPU Library Includes
 #include <cuda.h>
 #include <cuda_runtime_api.h>
-
-#include "shaderClass.h"
-#include "buffers.h"
-#include "particleSystem.h"
-#include "particleSystemCpu.h"
-#include "particleSystemGpu.h"
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-}
-
-// Environment Parameters
-const int numParticles = 1000;
-const bool useCPU = false;
-const bool render = true;
-const bool saveFinal = false; //Save final positions to a designated folder
-const int max_steps = 1000; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
-const int seed = 42; //Seed for run, set to 1 for random generation.
-
-     
-
-// Physical parameters - mass
-float proton_mass = 1.0f; //This is in atomic mass units 1amu ~ 1.67e-27 kg.
-float electron_mass = 0.00055f;
-float mass_ratio = 1836.15267343f; //This is the ratio with uncertainty of 6.0e-11.
-
-// Physical parameters - forces
-float residual_strong_range = 3; //In fentometers (10^-15 m)
-
-// Window Parameters
-const int width = 800;
-const int height = 800;
+#endif
 
 int main(int argc, char** argv) {
-    
-    if (render == false && max_steps < 0) {
-        printf("Warning: Can only exit program via ctrl-c. This is not recommended unless testing code.\n");
-    }
-
-    float* particles_pos;
-    unsigned int* particles_col;
-    ParticleSystem* system;
-
-    GLFWwindow* window;
-    Shader* shaderProgram;
-    Buffer* buffers;
-
-    if (render) {
-        //Initialize GLFW 
-        glfwInit();
-
-        //This window is where we will view our graphics
-        // (width, height, title, monitor, share)
-        window = glfwCreateWindow(width, height, "Particle Simulation", NULL, NULL);
-
-        //Check to make sure window was actually created, if not exit.
-        if (!window) {
-            glfwTerminate();
-            delete system;
-            return -1;
-        }
-
-        //Make the window the context for OpenGL
-        glfwMakeContextCurrent(window);
-
-        //Load OpenGL functions
-        gladLoadGL();
-
-        //What range of the screen we are actually drawing
-        // (0, 0, 800, 600) is the full screen given the window size of 800x600
-        glViewport(0, 0, width, height);
-
-        glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    }
-
-    if (useCPU) {
-        system = new ParticleSystemCPU(numParticles, 2, seed, render);
-    }
-    else {
-        system = new ParticleSystemGPU(numParticles, 2, seed, render);
-    }
-
-    
-
-    
-    
-
-    
 
     int steps = 0;
+
+    ParticleSystem* system;
+
     //Set up timers
-    clock_t cpu_start, cpu_end;
+#if (GPU_ENABLE)
     cudaEvent_t gpu_start, gpu_end;
+#else
+    clock_t cpu_start, cpu_end;
+#endif
     float milliseconds;
-    if (useCPU) {
-        cpu_start = clock();
+
+#if (RENDER_ENABLE)
+    GLFWwindow* window;
+
+    //Initialize GLFW 
+    glfwInit();
+
+    //This window is where we will view our graphics
+    // (width, height, title, monitor, share)
+    window = glfwCreateWindow(width, height, "Particle Simulation", NULL, NULL);
+
+    //Check to make sure window was actually created, if not exit.
+    if (!window) {
+        glfwTerminate();
+        return -1;
     }
-    else {
-        cudaEventCreate(&gpu_start);
-        cudaEventCreate(&gpu_end);
-        cudaEventRecord(gpu_start);
+
+    //Make the window the context for OpenGL
+    glfwMakeContextCurrent(window);
+
+    //Load OpenGL functions
+    gladLoadGL();
+
+    //What range of the screen we are actually drawing
+    // (0, 0, 800, 600) is the full screen given the window size of 800x600
+    glViewport(0, 0, width, height);
+
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+#else
+    if (max_steps < 0) {
+      printf("Warning: Can only exit program via ctrl-c. This is not recommended unless testing code.\n");
     }
+#endif
+
+#if (GPU_ENABLE)
+    system = new ParticleSystemGPU(numParticles, 2, seed);
+    cudaEventCreate(&gpu_start);
+    cudaEventCreate(&gpu_end);
+    cudaEventRecord(gpu_start);
+#else
+    system = new ParticleSystemCPU(numParticles, 2, seed);
+    cpu_start = clock();
+#endif
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
-    while (steps != max_steps && (!render || !glfwWindowShouldClose(window))) {
+    while (steps < max_steps) {
         system->update(1e-15);
-        
-
-        if (render) {
-            system->display();
-
-            //Swap the buffers so we see the new frame generated.
-            glfwSwapBuffers(window);
-
-            //We want to draw the points onto the screen:
-            glfwPollEvents();
-            
-        }
 
         steps++;
-        
+
+#if (RENDER_ENABLE)
+        if (glfwWindowShouldClose(window)) {
+          break;
+        }
+
+        system->display();
+
+        //Swap the buffers so we see the new frame generated.
+        glfwSwapBuffers(window);
+
+        //We want to draw the points onto the screen:
+        glfwPollEvents();
+#endif
     }
 
-    //Time calculations
-    if (useCPU) {
-        cpu_end = clock();
-        milliseconds = (float)(cpu_end - cpu_start) / CLOCKS_PER_SEC * 1000;
-    }
-    else {
-        cudaEventRecord(gpu_end);
-        cudaEventSynchronize(gpu_end);
-        cudaEventElapsedTime(&milliseconds, gpu_start, gpu_end);
-    }
+#if (GPU_ENABLE)
+    cudaEventRecord(gpu_end);
+    cudaEventSynchronize(gpu_end);
+    cudaEventElapsedTime(&milliseconds, gpu_start, gpu_end);
+#else
+    cpu_end = clock();
+    milliseconds = (float)(cpu_end - cpu_start) / CLOCKS_PER_SEC * 1000;
+#endif
+
     float it_per_sec = (float)steps * 1000 / milliseconds;
     std::cout << "Entire simulation took " << milliseconds << " ms." << std::endl;
     std::cout << "Time per iteration (ms): " << (milliseconds / (float)steps) << "." << std::endl;
     std::cout << "Iterations per second: " << it_per_sec << "." << std::endl;
 
+
+#if (SAVE_FINAL)
     //Save to file (goes to data folder in the executable's directory
     //File is called "currentTime"_"runType"_"iterations"_
     //CurrentTime is the system time when the file was made
     //Where run type is either CPU or GPU
     //Iterations is the number of iterations used for this file
-    if (saveFinal) {
-        //Assumes to find a data folder in the executable's directory
-        char buf[256];
-        char CPU[4] = "CPU";
-        char GPU[4] = "GPU";
-        time_t currentTime = time(nullptr);
-        char time[20];
-        std::strftime(time, sizeof(time), "%Y-%m-%d_%H-%M-%S", std::localtime(&currentTime));
-        if (useCPU) {
-            snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, CPU, steps);
-        }
-        else {
-            snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, GPU, steps);
-        }
+ 
+    //Assumes to find a data folder in the executable's directory
+    char buf[256];
+    char CPU[4] = "CPU";
+    char GPU[4] = "GPU";
+    time_t currentTime = time(nullptr);
+    char time[20];
+    std::strftime(time, sizeof(time), "%Y-%m-%d_%H-%M-%S", std::localtime(&currentTime));
+    if (useCPU) {
+        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, CPU, steps);
+    }
+    else {
+        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, GPU, steps);
+    }
         
-        system->writecurpostofile(buf);
-        
-
-
-
-    }
+    system->writecurpostofile(buf);
+#endif
     
-    //We have completed so we need to clean up.
-    
-    if (render) {
-        //Terminate GLFW
-        glfwDestroyWindow(window);
-        glfwTerminate();
-    }
+  //We have completed so we need to clean up.
+#if (RENDER_ENABLE)
+  //Terminate GLFW
+  glfwDestroyWindow(window);
+  glfwTerminate();
+#endif
 
-    if (!useCPU) {
-        cudaEventDestroy(gpu_start);
-        cudaEventDestroy(gpu_end);
-    }
+#if (GPU_ENABLE)
+  cudaEventDestroy(gpu_start);
+  cudaEventDestroy(gpu_end);
+#endif
 
-    //Delete the particleSystem
-    delete system;
+  //Delete the particleSystem
+  delete system;
     
-    return 0;
+  return 0;
 
 }
