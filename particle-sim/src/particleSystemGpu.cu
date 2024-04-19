@@ -3,7 +3,7 @@
 __constant__ double d_inv_masses[3];
 __constant__ float d_charges[3];
 
-__global__ void update_naive(float timeDelta, int numParticles, float coulomb_scalar, float yukawa_scalar, float yukawa_radius, float yukawa_cutoff, float* positions, float* velocities, unsigned char* particleType) {
+__global__ void update_naive(float timeDelta, int numParticles, float* positions, float* velocities, unsigned char* particleType) {
 	int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	if (gid < numParticles) {
 		int part_type = particleType[gid];
@@ -236,7 +236,7 @@ void ParticleSystemGPU::update(float timeDelta) {
 		cudaGraphicsMapResources(1, &positionResource, 0);
 		cudaGraphicsResourceGetMappedPointer((void**)&d_positions, &Size, positionResource);
 #endif
-		update_naive<<<gridSize, blockSize>>>(timeDelta, p_numParticles, coulomb_scalar, yukawa_scalar, yukawa_radius, yukawa_cutoff, d_positions, d_velocities, d_particleType);
+		update_naive<<<gridSize, blockSize>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
 	
 		std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
 
