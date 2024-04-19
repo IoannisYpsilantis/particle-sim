@@ -14,9 +14,9 @@
 constexpr int width = 800;
 constexpr int height = 800;
 
-constexpr int ELECTRON_COLOR[3] = { 0, 180, 255 };
-constexpr int PROTON_COLOR[3] = { 255, 0, 0 };
-constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 };
+constexpr int ELECTRON_COLOR[3] = { 0, 180, 255 }; // Blue
+constexpr int PROTON_COLOR[3] = { 255, 0, 0 }; // Red
+constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 
 // Environment Parameters
 constexpr int numParticles = 1000;
