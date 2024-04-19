@@ -34,12 +34,14 @@ int main(int argc, char** argv) {
     ParticleSystem* system;
 
     //Set up timers
+#if (TIMING_ENABLE)
 #if (GPU_ENABLE)
     cudaEvent_t gpu_start, gpu_end;
 #else
     clock_t cpu_start, cpu_end;
 #endif
     float milliseconds;
+#endif
 
 #if (RENDER_ENABLE)
     GLFWwindow* window;
@@ -76,12 +78,16 @@ int main(int argc, char** argv) {
 
 #if (GPU_ENABLE)
     system = new ParticleSystemGPU(numParticles, systemInitType, seed);
+#if (TIMING_ENABLE)
     cudaEventCreate(&gpu_start);
     cudaEventCreate(&gpu_end);
     cudaEventRecord(gpu_start);
+#endif
 #else
     system = new ParticleSystemCPU(numParticles, systemInitType, seed);
+#if (TIMING_ENABLE)
     cpu_start = clock();
+#endif
 #endif
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
@@ -105,6 +111,7 @@ int main(int argc, char** argv) {
 #endif
     }
 
+#if (TIMING_ENABLE)
 #if (GPU_ENABLE)
     cudaEventRecord(gpu_end);
     cudaEventSynchronize(gpu_end);
@@ -118,6 +125,8 @@ int main(int argc, char** argv) {
     std::cout << "Entire simulation took " << milliseconds << " ms." << std::endl;
     std::cout << "Time per iteration (ms): " << (milliseconds / (float)steps) << "." << std::endl;
     std::cout << "Iterations per second: " << it_per_sec << "." << std::endl;
+
+#endif
 
 
 #if (SAVE_FINAL)
@@ -151,7 +160,7 @@ int main(int argc, char** argv) {
   glfwTerminate();
 #endif
 
-#if (GPU_ENABLE)
+#if (GPU_ENABLE && TIMING_ENABLE)
   cudaEventDestroy(gpu_start);
   cudaEventDestroy(gpu_end);
 #endif
