@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
     while (steps != max_steps) {
-        system->update(1e-15);
+        system->update(1e-8);
 
         steps++;
 
@@ -143,11 +143,11 @@ int main(int argc, char** argv) {
     time_t currentTime = time(nullptr);
     char time[20];
     std::strftime(time, sizeof(time), "%Y-%m-%d_%H-%M-%S", std::localtime(&currentTime));
-    if (useCPU) {
-        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, CPU, steps);
+    if (GPU_ENABLE) {
+        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, GPU, steps);
     }
     else {
-        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, GPU, steps);
+        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, CPU, steps);
     }
         
     system->writecurpostofile(buf);

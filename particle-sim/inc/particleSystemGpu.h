@@ -24,21 +24,21 @@ public:
 
 	~ParticleSystemGPU(void);
 
-	float* getPositions(void);
+	double* getPositions(void);
 
-	float* getVelocities(void);
+	double* getVelocities(void);
 
 	unsigned int* getColors(void);
 
-	void update(float timeDelta);
+	void update(double timeDelta);
 
 	void writecurpostofile(char* file);
 
 	void display();
 
 	//Particle Data Device
-	float* d_positions;
-	float* d_velocities;
+	double* d_positions;
+	double* d_velocities;
 	unsigned int* d_colors;
 	unsigned char* d_particleType;
 
