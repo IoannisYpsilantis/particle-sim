@@ -5,14 +5,14 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 
 		// Initialize Positions array
 		int positionElementsCount = 4 * numParticles;
-		positions = new double[positionElementsCount];
+		positions = new float[positionElementsCount];
 
 		// Initialize Colors array
 		int colorElementsCount = 3 * numParticles;
 		colors = new unsigned int[colorElementsCount];
 
 		int velocityElementsCount = 3 * numParticles;
-		velocities = new double[velocityElementsCount];
+		velocities = new float[velocityElementsCount];
 
 		// Initialize Particle Type array
 		particleType = new unsigned char[numParticles];
@@ -21,9 +21,9 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 		// Circular initialization
 		if (initMethod == 0) {
 			for (unsigned int i = 0; i < numParticles; i++) {
-				double theta = (double)((numParticles - 1 - i) / (double)numParticles * 2.0 * 3.1415); // Ensure floating-point division
-				positions[i * 4] = (double)cos(theta);
-				positions[i * 4 + 1] = (double)sin(theta);
+				float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2.0 * 3.1415); // Ensure floating-point division
+				positions[i * 4] = (float)cos(theta);
+				positions[i * 4 + 1] = (float)sin(theta);
 				positions[i * 4 + 2] = 1.0f;
 				positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 
@@ -44,19 +44,19 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 				}
 				for (unsigned int i = 0; i < numParticles; i++) {
 						// Randomly initialize position in range [-1,1)
-						positions[i * 4] = ((double)(rand() % 2000) - 1000.0) / 1000.0;
-						positions[i * 4 + 1] = ((double)(rand() % 2000) - 1000.0) / 1000.0;
-						positions[i * 4 + 2] = ((double)(rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4 + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4 + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
 						positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 			
 						// Randomly initializes velocity in range [-250000,250000)
-						velocities[i * 3] = ((double)(rand() % 500) - 250.0) * 1000.0;
-						velocities[i * 3 + 1] = ((double)(rand() % 500) - 250.0) * 1000.0;
-						velocities[i * 3 + 2] = ((double)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3] = ((float)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) * 1000.0;
 
 						// Generates random number (either 0, 1, 2) from uniform dist
-						//particleType[i] = rand() % 3;
-						particleType[i] = 2;
+						particleType[i] = rand() % 3;
+						//particleType[i] = 2;
 
 						// Sets color based on particle type
 						if (particleType[i] == 0) { // If Electron
@@ -89,7 +89,7 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 		glGenBuffers(1, &colorBuffer);
 
 		glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(double) * 4 * numParticles, positions, GL_STREAM_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * numParticles, positions, GL_STREAM_DRAW);
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
 		glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
@@ -105,11 +105,11 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 #endif
 }
 
-double* ParticleSystemCPU::getPositions(void) {
+float* ParticleSystemCPU::getPositions(void) {
 	return positions;
 }
 
-double* ParticleSystemCPU::getVelocities(void) {
+float* ParticleSystemCPU::getVelocities(void) {
 	return velocities;
 }
 
@@ -117,30 +117,31 @@ unsigned int* ParticleSystemCPU::getColors(void) {
 	return colors;
 }
 
-double square(double val) {
+float square(float val) {
 	return pow(val, 2);
 }
 
-void ParticleSystemCPU::update(double timeDelta) {
+void ParticleSystemCPU::update(float timeDelta) {
 	for (int i = 0; i < p_numParticles; i++) {
 		//Update velocities
 		int part_type = particleType[i];
-		double force_x = 0.0;
-		double force_y = 0.0;
-		double force_z = 0.0;
+		float force_x = 0.0;
+		float force_y = 0.0;
+		float force_z = 0.0;
 		for (int j = 0; j < p_numParticles; j++) {
-			double dist_x = positions[i] - positions[j];
-			double dist_y = positions[i + 1] - positions[j + 1];
-			double dist_z = positions[i + 2] - positions[j + 2];
+			float dist_x = positions[i*4] - positions[j*4];
+			float dist_y = positions[i*4 + 1] - positions[j*4 + 1];
+			float dist_z = positions[i*4 + 2] - positions[j*4 + 2];
 
-			double dist_square = square(dist_x) + square(dist_y) + square(dist_z);
-			double dist = sqrt(dist_square);
+			float dist_square = square(dist_x) + square(dist_y) + square(dist_z);
+			float dist = sqrt(dist_square);
+			float force = 0.0;
 			if (i == j || dist < yukawa_cutoff) {
 				continue;
 			}
 			
 			//Natural Coloumb force
-			double force = (double) coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
+			force += (float) coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
@@ -156,9 +157,9 @@ void ParticleSystemCPU::update(double timeDelta) {
 		}
 
 		//Update velocities 
-		velocities[i] += force_x * inv_masses[part_type] * timeDelta;
-		velocities[i + 1] += force_y * inv_masses[part_type] * timeDelta;
-		velocities[i + 2] += force_z * inv_masses[part_type] * timeDelta;
+		velocities[i*3] += force_x * inv_masses[part_type] * timeDelta;
+		velocities[i*3 + 1] += force_y * inv_masses[part_type] * timeDelta;
+		velocities[i*3 + 2] += force_z * inv_masses[part_type] * timeDelta;
 
 		//Update positions from velocities
 		positions[i * 4] += velocities[i * 3] * timeDelta;
@@ -197,13 +198,15 @@ void ParticleSystemCPU::display() {
 #if (RENDER_ENABLE)
 		//Update the positions
 		glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(double) * 4 * p_numParticles, positions, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * p_numParticles, positions, GL_STATIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		shaderProgram->Activate();
+
+		glPointSize(5.0);
 
 		glDrawArrays(GL_POINTS, 0, p_numParticles);
 #endif

@@ -1,27 +1,27 @@
 #include "particleSystemGpu.h"
 
-__constant__ double d_inv_masses[3];
-__constant__ double d_charges[3];
+__constant__ float d_inv_masses[3];
+__constant__ float d_charges[3];
 
-__global__ void update_naive(double timeDelta, int numParticles, double* positions, double* velocities, unsigned char* particleType) {
+__global__ void update_naive(float timeDelta, int numParticles, float* positions, float* velocities, unsigned char* particleType) {
 	int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	if (gid < numParticles) {
 		int part_type = particleType[gid];
-		double force_x = 0.0;
-		double force_y = 0.0;
-		double force_z = 0.0;
+		float force_x = 0.0;
+		float force_y = 0.0;
+		float force_z = 0.0;
 		for (int j = 0; j < numParticles; j++) {
-			double dist_x = positions[gid] - positions[j];
-			double dist_y = positions[gid + 1] - positions[j + 1];
-			double dist_z = positions[gid + 2] - positions[j + 2];
-			double dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
-			double dist = sqrt(dist_square);
+			float dist_x = positions[gid*4] - positions[j*4];
+			float dist_y = positions[gid*4 + 1] - positions[j*4 + 1];
+			float dist_z = positions[gid*4 + 2] - positions[j*4 + 2];
+			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
+			float dist = sqrt(dist_square);
 			if (gid == j || dist < yukawa_cutoff) {
 				continue;
 			}
-
+			float force = 0.0;
 			//Coulomb force
-			double force = (double)coulomb_scalar / dist_square * d_charges[part_type] * d_charges[particleType[j]];
+			force += (float)coulomb_scalar / dist_square * d_charges[part_type] * d_charges[particleType[j]];
 			
 			
 
@@ -37,9 +37,9 @@ __global__ void update_naive(double timeDelta, int numParticles, double* positio
 		}
 
 		//Update velocities
-		velocities[gid] += force_x * d_inv_masses[part_type] * timeDelta;
-		velocities[gid + 1] += force_y * d_inv_masses[part_type] * timeDelta;
-		velocities[gid + 2] += force_z * d_inv_masses[part_type] * timeDelta;
+		velocities[gid*3] += force_x * d_inv_masses[part_type] * timeDelta;
+		velocities[gid*3 + 1] += force_y * d_inv_masses[part_type] * timeDelta;
+		velocities[gid*3 + 2] += force_z * d_inv_masses[part_type] * timeDelta;
 
 		//Update positions from velocities
 		positions[gid * 4] += velocities[gid * 3] * timeDelta;
@@ -66,19 +66,19 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 		p_numParticles = numParticles;
 
 		blockSize = TILE_SIZE;
-		gridSize = (int)ceil((double)numParticles / (double)TILE_SIZE);
+		gridSize = (int)ceil((float)numParticles / (float)TILE_SIZE);
 		cudaEventCreate(&event);
 
 		// Initialize Positions array
 		int positionElementsCount = 4 * numParticles;
-		positions = new double[positionElementsCount];
+		positions = new float[positionElementsCount];
 
 		// Initialize Colors array
 		int colorElementsCount = 3 * numParticles;
 		colors = new unsigned int[colorElementsCount];
 
 		int velocityElementsCount = 3 * numParticles;
-		velocities = new double[velocityElementsCount];
+		velocities = new float[velocityElementsCount];
 
 		// Initialize Particle Type array
 		particleType = new unsigned char[numParticles];
@@ -86,9 +86,9 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 		// Circular initialization
 		if (initMethod == 0) {
 				for (unsigned int i = 0; i < numParticles; i++) {
-						double theta = (double)((numParticles - 1 - i) / (double)numParticles * 2.0 * 3.1415); // Ensure floating-point division
-						positions[i * 4] = (double)cos(theta);
-						positions[i * 4 + 1] = (double)sin(theta);
+						float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2.0 * 3.1415); // Ensure floating-point division
+						positions[i * 4] = (float)cos(theta);
+						positions[i * 4 + 1] = (float)sin(theta);
 						positions[i * 4 + 2] = 1.0f;
 						positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 
@@ -108,20 +108,20 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 				}
 				for (unsigned int i = 0; i < numParticles; i++) {
 						// Randomly initialize position in range [-1,1)
-						positions[i * 4] = ((double)(rand() % 2000) - 1000.0) / 1000.0;
-						positions[i * 4 + 1] = ((double)(rand() % 2000) - 1000.0) / 1000.0;
-						positions[i * 4 + 2] = ((double)(rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4] = ((rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4 + 1] = ((rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4 + 2] = ((rand() % 2000) - 1000.0) / 1000.0;
 						positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 
 						// Randomly initializes velocity in range [-250000,250000)
-						velocities[i * 3] = ((double)(rand() % 500) - 250.0) * 1000.0;
-						velocities[i * 3 + 1] = ((double)(rand() % 500) - 250.0) * 1000.0;
-						velocities[i * 3 + 2] = ((double)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3] = ((float)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) * 1000.0;
 
 						// Generates random number (either 0, 1, 2) from uniform dist
 						//particleType[i] = rand() % 3 % 2; 
-						//particleType[i] = rand() % 3;
-						particleType[i] = 2;
+						particleType[i] = rand() % 3;
+						//particleType[i] = 2;
 
 						// Sets color based on particle type
 						if (particleType[i] == 0) { // If Electron
@@ -155,7 +155,7 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 			glGenBuffers(1, &colorBuffer);
 
 			glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(double) * 4 * numParticles, positions, GL_STREAM_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * numParticles, positions, GL_STREAM_DRAW);
 			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
 			glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
@@ -172,18 +172,18 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 
 		//Initialize device
 
-		cudaMemcpyToSymbol(d_inv_masses, inv_masses, 3 * sizeof(double));
-		cudaMemcpyToSymbol(d_charges, charges, 3 * sizeof(double));
+		cudaMemcpyToSymbol(d_inv_masses, inv_masses, 3 * sizeof(float));
+		cudaMemcpyToSymbol(d_charges, charges, 3 * sizeof(float));
 
 #if (RENDER_ENABLE)
 		cudaGraphicsGLRegisterBuffer(&positionResource, positionBuffer, cudaGraphicsMapFlagsNone);
 #else
-		cudaMalloc(&d_positions, positionElementsCount * sizeof(double));
-		cudaMemcpy(d_positions, positions, positionElementsCount * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMalloc(&d_positions, positionElementsCount * sizeof(float));
+		cudaMemcpy(d_positions, positions, positionElementsCount * sizeof(float), cudaMemcpyHostToDevice);
 #endif
 
-		cudaMalloc(&d_velocities, velocityElementsCount * sizeof(double));
-		cudaMemcpy(d_velocities, velocities, velocityElementsCount * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMalloc(&d_velocities, velocityElementsCount * sizeof(float));
+		cudaMemcpy(d_velocities, velocities, velocityElementsCount * sizeof(float), cudaMemcpyHostToDevice);
 
 #if (RENDER_ENABLE)
 		cudaGraphicsGLRegisterBuffer(&colorResource, colorBuffer, cudaGraphicsMapFlagsNone);
@@ -196,14 +196,14 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 		cudaMemcpy(d_particleType, particleType, numParticles * sizeof(unsigned char), cudaMemcpyHostToDevice);
 }
 
-double* ParticleSystemGPU::getPositions() {
+float* ParticleSystemGPU::getPositions() {
 #if (RENDER_ENABLE)
 		size_t Size;
 		cudaGraphicsMapResources(1, &positionResource, 0);
 		cudaGraphicsResourceGetMappedPointer((void**)&d_positions, &Size, positionResource);
 #endif
 	
-		int numBytes = p_numParticles * 4 * sizeof(double);
+		int numBytes = p_numParticles * 4 * sizeof(float);
 		cudaMemcpy(positions, d_positions, numBytes, cudaMemcpyDeviceToHost);
 
 #if (RENDER_ENABLE)
@@ -212,8 +212,8 @@ double* ParticleSystemGPU::getPositions() {
 		return positions;
 }
 
-double* ParticleSystemGPU::getVelocities() {
-		int numBytes = p_numParticles * 3 * sizeof(double);
+float* ParticleSystemGPU::getVelocities() {
+		int numBytes = p_numParticles * 3 * sizeof(float);
 		cudaMemcpy(velocities, d_velocities, numBytes, cudaMemcpyDeviceToHost);
 		return velocities;
 }
@@ -236,7 +236,7 @@ unsigned int* ParticleSystemGPU::getColors() {
 
 
 
-void ParticleSystemGPU::update(double timeDelta) {
+void ParticleSystemGPU::update(float timeDelta) {
 #if (RENDER_ENABLE)
 		size_t Size;
 		cudaGraphicsMapResources(1, &positionResource, 0);
@@ -296,6 +296,8 @@ void ParticleSystemGPU::display() {
 
 		shaderProgram->Activate();
 
+		glPointSize(2.0);
+		
 		glDrawArrays(GL_POINTS, 0, p_numParticles);
 #endif
 }

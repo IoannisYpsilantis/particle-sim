@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
     while (steps != max_steps) {
-        system->update(1e-8);
+        system->update(1e-9);
 
         steps++;
 

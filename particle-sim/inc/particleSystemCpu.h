@@ -24,13 +24,13 @@ public:
 
 		~ParticleSystemCPU(void);// Possibly don't need to redeclare this here cause its in particleSystem.h
 
-		double* getPositions(void);// Possibly don't need to redeclare this here cause its in particleSystem.h
+		float* getPositions(void);// Possibly don't need to redeclare this here cause its in particleSystem.h
 
-		double* getVelocities(void);
+		float* getVelocities(void);
 
 		unsigned int* getColors(void);// Possibly don't need to redeclare this here cause its in particleSystem.h
 
-		void update(double timeDelta);// Possibly don't need to redeclare this here cause its in particleSystem.h
+		void update(float timeDelta);// Possibly don't need to redeclare this here cause its in particleSystem.h
 
 		void writecurpostofile(char* file);// Possibly don't need to redeclare this here cause its in particleSystem.h
 
