@@ -49,13 +49,14 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 						positions[i * 4 + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
 						positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 			
-						// Randomly initializes velocity in range [-0.0025,0.0025)
-						velocities[i * 3] = ((float)(rand() % 500) - 250.0) / 100000.0;
-						velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
-						velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
+						// Randomly initializes velocity in range [-250000,250000)
+						velocities[i * 3] = ((float)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) * 1000.0;
 
 						// Generates random number (either 0, 1, 2) from uniform dist
 						particleType[i] = rand() % 3;
+						//particleType[i] = 2;
 
 						// Sets color based on particle type
 						if (particleType[i] == 0) { // If Electron
@@ -121,55 +122,55 @@ float square(float val) {
 }
 
 void ParticleSystemCPU::update(float timeDelta) {
-	std::cout << velocities[0];
 	for (int i = 0; i < p_numParticles; i++) {
 		//Update velocities
 		int part_type = particleType[i];
-		double force_x = 0.0f;
-		double force_y = 0.0f;
-		double force_z = 0.0f;
+		float force_x = 0.0;
+		float force_y = 0.0;
+		float force_z = 0.0;
 		for (int j = 0; j < p_numParticles; j++) {
-			
-			//float dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]) + square(positions[i + 2] - positions[j + 2]);
-			float dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]);
+			float dist_x = positions[i*4] - positions[j*4];
+			float dist_y = positions[i*4 + 1] - positions[j*4 + 1];
+			float dist_z = positions[i*4 + 2] - positions[j*4 + 2];
+
+			float dist_square = square(dist_x) + square(dist_y) + square(dist_z);
 			float dist = sqrt(dist_square);
+			float force = 0.0;
 			if (i == j || dist < yukawa_cutoff) {
 				continue;
 			}
 			
 			//Natural Coloumb force
-			double force = (double) coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
-			double dist_x = (double) positions[i] - positions[j];
-			double dist_y = (double) positions[i + 1] - positions[j + 1];
-			force_x += force * dist_x / dist;
-			force_y += force * dist_y / dist;
+			force += (float) coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
 			if (part_type != 0 && particleType[j] != 0) {
-				force = yukawa_scalar * exp(dist / yukawa_radius) / dist;
-				force_x += force * dist_x / dist;
-				force_y += force * dist_y / dist;
+				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;	
 			}
+
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
 
 
 		}
-		//Update velocities 
-		velocities[i] += force_x * inv_masses[part_type] * 1e-9 * timeDelta;
-		velocities[i + 1] += force_y * inv_masses[part_type] * 1e-9 * timeDelta;
-		velocities[i + 2] += force_z * inv_masses[part_type] * 1e-9 * timeDelta;
 
+		//Update velocities 
+		velocities[i*3] += force_x * inv_masses[part_type] * timeDelta;
+		velocities[i*3 + 1] += force_y * inv_masses[part_type] * timeDelta;
+		velocities[i*3 + 2] += force_z * inv_masses[part_type] * timeDelta;
 
 		//Update positions from velocities
-		positions[i * 4] += velocities[i * 3];
+		positions[i * 4] += velocities[i * 3] * timeDelta;
 		if (abs(positions[i * 4]) > 1) {
 			velocities[i * 3] = -1 * velocities[i * 3];
 		}
-		positions[i * 4 + 1] += velocities[i * 3 + 1];
+		positions[i * 4 + 1] += velocities[i * 3 + 1] * timeDelta;
 		if (abs(positions[i * 4 + 1]) > 1) {
 			velocities[i * 3 + 1] = -1 * velocities[i * 3 + 1];
 		}
-		positions[i * 4 + 2] += velocities[i * 3 + 2];
+		positions[i * 4 + 2] += velocities[i * 3 + 2] * timeDelta;
 		if (abs(positions[i * 4 + 2]) > 1) {
 			velocities[i * 3 + 2] = -1 * velocities[i * 3 + 2];
 		}
@@ -204,6 +205,8 @@ void ParticleSystemCPU::display() {
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		shaderProgram->Activate();
+
+		glPointSize(5.0);
 
 		glDrawArrays(GL_POINTS, 0, p_numParticles);
 #endif

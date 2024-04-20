@@ -1,53 +1,58 @@
 #include "particleSystemGpu.h"
 
-__constant__ double d_inv_masses[3];
+__constant__ float d_inv_masses[3];
 __constant__ float d_charges[3];
 
 __global__ void update_naive(float timeDelta, int numParticles, float* positions, float* velocities, unsigned char* particleType) {
 	int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	if (gid < numParticles) {
 		int part_type = particleType[gid];
-		double force_x = 0.0f;
-		double force_y = 0.0f;
-		double force_z = 0.0f;
+		float force_x = 0.0;
+		float force_y = 0.0;
+		float force_z = 0.0;
 		for (int j = 0; j < numParticles; j++) {
-			float dist_square = (positions[gid] - positions[j]) * (positions[gid] - positions[j]) + (positions[gid] - positions[j + 1]) * (positions[gid] - positions[j + 1]);
+			float dist_x = positions[gid*4] - positions[j*4];
+			float dist_y = positions[gid*4 + 1] - positions[j*4 + 1];
+			float dist_z = positions[gid*4 + 2] - positions[j*4 + 2];
+			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
 			float dist = sqrt(dist_square);
 			if (gid == j || dist < yukawa_cutoff) {
 				continue;
 			}
-
-			double force = (double)coulomb_scalar / dist_square * d_charges[part_type] * d_charges[particleType[j]];
-			double dist_x = (double)positions[gid] - positions[j];
-			double dist_y = (double)positions[gid + 1] - positions[j + 1];
-			force_x += force * dist_x / dist;
-			force_y += force * dist_y / dist;
+			float force = 0.0;
+			//Coulomb force
+			force += (float)coulomb_scalar / dist_square * d_charges[part_type] * d_charges[particleType[j]];
+			
+			
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
 			if (part_type != 0 && particleType[j] != 0) {
-				force = yukawa_scalar * exp(dist / yukawa_radius) / dist;
-				force_x += force * dist_x / dist;
-				force_y += force * dist_y / dist;
+				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
 			}
+			//Break force into components
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
 		}
+
 		//Update velocities
-		velocities[gid] += force_x * d_inv_masses[part_type] * 1e-9 * timeDelta;
-		velocities[gid + 1] += force_y * d_inv_masses[part_type] * 1e-9 * timeDelta;
-		velocities[gid + 2] += force_z * d_inv_masses[part_type] * 1e-9 * timeDelta;
+		velocities[gid*3] += force_x * d_inv_masses[part_type] * timeDelta;
+		velocities[gid*3 + 1] += force_y * d_inv_masses[part_type] * timeDelta;
+		velocities[gid*3 + 2] += force_z * d_inv_masses[part_type] * timeDelta;
 
 		//Update positions from velocities
-		positions[gid * 4] += velocities[gid * 3];
+		positions[gid * 4] += velocities[gid * 3] * timeDelta;
 		if (abs(positions[gid * 4]) > 1) {
 			velocities[gid * 3] = -1 * velocities[gid * 3];
 		}
 		
-		positions[gid * 4 + 1] += velocities[gid * 3 + 1];
+		positions[gid * 4 + 1] += velocities[gid * 3 + 1] * timeDelta;
 		if (abs(positions[gid * 4 + 1]) > 1) {
 			velocities[gid * 3 + 1] = -1 * velocities[gid * 3 + 1];
 		}
 
-		positions[gid * 4 + 2] += velocities[gid * 3 + 2];
+		positions[gid * 4 + 2] += velocities[gid * 3 + 2] * timeDelta;
 		if (abs(positions[gid * 4 + 2]) > 1) {
 			velocities[gid * 3 + 2] = -1 * velocities[gid * 3 + 2];
 		}
@@ -103,19 +108,20 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 				}
 				for (unsigned int i = 0; i < numParticles; i++) {
 						// Randomly initialize position in range [-1,1)
-						positions[i * 4] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-						positions[i * 4 + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-						positions[i * 4 + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4] = ((rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4 + 1] = ((rand() % 2000) - 1000.0) / 1000.0;
+						positions[i * 4 + 2] = ((rand() % 2000) - 1000.0) / 1000.0;
 						positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
 
-						// Randomly initializes velocity in range [-0.0025,0.0025)
-						velocities[i * 3] = ((float)(rand() % 500) - 250.0) / 100000.0;
-						velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) / 100000.0;
-						velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) / 100000.0;
+						// Randomly initializes velocity in range [-250000,250000)
+						velocities[i * 3] = ((float)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) * 1000.0;
+						velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) * 1000.0;
 
 						// Generates random number (either 0, 1, 2) from uniform dist
 						//particleType[i] = rand() % 3 % 2; 
 						particleType[i] = rand() % 3;
+						//particleType[i] = 2;
 
 						// Sets color based on particle type
 						if (particleType[i] == 0) { // If Electron
@@ -166,7 +172,7 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 
 		//Initialize device
 
-		cudaMemcpyToSymbol(d_inv_masses, inv_masses, 3 * sizeof(double));
+		cudaMemcpyToSymbol(d_inv_masses, inv_masses, 3 * sizeof(float));
 		cudaMemcpyToSymbol(d_charges, charges, 3 * sizeof(float));
 
 #if (RENDER_ENABLE)
@@ -290,6 +296,8 @@ void ParticleSystemGPU::display() {
 
 		shaderProgram->Activate();
 
+		glPointSize(2.0);
+		
 		glDrawArrays(GL_POINTS, 0, p_numParticles);
 #endif
 }
