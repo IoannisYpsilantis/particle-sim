@@ -7,30 +7,35 @@ __global__ void update_naive(double timeDelta, int numParticles, double* positio
 	int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	if (gid < numParticles) {
 		int part_type = particleType[gid];
-		double force_x = 0.0f;
-		double force_y = 0.0f;
-		double force_z = 0.0f;
+		double force_x = 0.0;
+		double force_y = 0.0;
+		double force_z = 0.0;
 		for (int j = 0; j < numParticles; j++) {
-			double dist_square = (positions[gid] - positions[j]) * (positions[gid] - positions[j]) + (positions[gid] - positions[j + 1]) * (positions[gid] - positions[j + 1]);
+			double dist_x = positions[gid] - positions[j];
+			double dist_y = positions[gid + 1] - positions[j + 1];
+			double dist_z = positions[gid + 2] - positions[j + 2];
+			double dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
 			double dist = sqrt(dist_square);
 			if (gid == j || dist < yukawa_cutoff) {
 				continue;
 			}
 
+			//Coulomb force
 			double force = (double)coulomb_scalar / dist_square * d_charges[part_type] * d_charges[particleType[j]];
-			double dist_x = (double)positions[gid] - positions[j];
-			double dist_y = (double)positions[gid + 1] - positions[j + 1];
-			force_x += force * dist_x / dist;
-			force_y += force * dist_y / dist;
+			
+			
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
 			if (part_type != 0 && particleType[j] != 0) {
-				force = yukawa_scalar * exp(-dist / yukawa_radius) / dist;
-				force_x += force * dist_x / dist;
-				force_y += force * dist_y / dist;
+				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
 			}
+			//Break force into components
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
 		}
+
 		//Update velocities
 		velocities[gid] += force_x * d_inv_masses[part_type] * timeDelta;
 		velocities[gid + 1] += force_y * d_inv_masses[part_type] * timeDelta;
@@ -115,7 +120,8 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 
 						// Generates random number (either 0, 1, 2) from uniform dist
 						//particleType[i] = rand() % 3 % 2; 
-						particleType[i] = rand() % 3;
+						//particleType[i] = rand() % 3;
+						particleType[i] = 2;
 
 						// Sets color based on particle type
 						if (particleType[i] == 0) { // If Electron

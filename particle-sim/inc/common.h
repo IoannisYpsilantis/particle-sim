@@ -4,7 +4,7 @@
 // Program Controls
 #define RENDER_ENABLE (1)
 #define TIMING_ENABLE (0)
-#define GPU_ENABLE (1)
+#define GPU_ENABLE (0)
 #define SAVE_FINAL (0)
 
 // GPU Configuration

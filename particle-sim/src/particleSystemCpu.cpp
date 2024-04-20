@@ -55,7 +55,8 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 						velocities[i * 3 + 2] = ((double)(rand() % 500) - 250.0) * 1000.0;
 
 						// Generates random number (either 0, 1, 2) from uniform dist
-						particleType[i] = rand() % 3;
+						//particleType[i] = rand() % 3;
+						particleType[i] = 2;
 
 						// Sets color based on particle type
 						if (particleType[i] == 0) { // If Electron
@@ -124,13 +125,15 @@ void ParticleSystemCPU::update(double timeDelta) {
 	for (int i = 0; i < p_numParticles; i++) {
 		//Update velocities
 		int part_type = particleType[i];
-		double force_x = 0.0f;
-		double force_y = 0.0f;
-		double force_z = 0.0f;
+		double force_x = 0.0;
+		double force_y = 0.0;
+		double force_z = 0.0;
 		for (int j = 0; j < p_numParticles; j++) {
-			
-			//double dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]) + square(positions[i + 2] - positions[j + 2]);
-			double dist_square = square(positions[i] - positions[j]) + square(positions[i + 1] - positions[j + 1]);
+			double dist_x = positions[i] - positions[j];
+			double dist_y = positions[i + 1] - positions[j + 1];
+			double dist_z = positions[i + 2] - positions[j + 2];
+
+			double dist_square = square(dist_x) + square(dist_y) + square(dist_z);
 			double dist = sqrt(dist_square);
 			if (i == j || dist < yukawa_cutoff) {
 				continue;
@@ -138,19 +141,16 @@ void ParticleSystemCPU::update(double timeDelta) {
 			
 			//Natural Coloumb force
 			double force = (double) coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
-			
-			double dist_x = (double) positions[i] - positions[j];
-			double dist_y = (double) positions[i + 1] - positions[j + 1];
-			force_x += force * dist_x / dist;
-			force_y += force * dist_y / dist;
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
 			if (part_type != 0 && particleType[j] != 0) {
-				force = yukawa_scalar * exp(-dist / yukawa_radius) / dist;
-				force_x += force * dist_x / dist;
-				force_y += force * dist_y / dist;
+				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;	
 			}
+
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
 
 
 		}
