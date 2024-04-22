@@ -28,7 +28,9 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height){
 #endif
 
 int main(int argc, char** argv) {
-
+    if (STORAGE_TYPE && RENDER_ENABLE) {
+        std::cout << "Cannot render using SOAs defaulting to AOS" << std::endl;
+    }
     int steps = 0;
 
     ParticleSystem* system;
@@ -40,9 +42,9 @@ int main(int argc, char** argv) {
 #else
     clock_t cpu_start, cpu_end;
 #endif
-    float milliseconds;
+    
 #endif
-
+    float milliseconds = 0;
 #if (RENDER_ENABLE)
     GLFWwindow* window;
 
@@ -144,13 +146,13 @@ int main(int argc, char** argv) {
     char time[20];
     std::strftime(time, sizeof(time), "%Y-%m-%d_%H-%M-%S", std::localtime(&currentTime));
     if (GPU_ENABLE) {
-        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, GPU, steps);
+        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, GPU, ID);
     }
     else {
-        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, CPU, steps);
+        snprintf(buf, sizeof(buf), "data/%s_%s_%d.txt", time, CPU, ID);
     }
         
-    system->writecurpostofile(buf);
+    system->writecurpostofile(buf, steps, milliseconds);
 #endif
     
   //We have completed so we need to clean up.

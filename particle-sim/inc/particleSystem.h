@@ -19,7 +19,7 @@ public:
 
 	virtual void update(float timeDelta) = 0;
 
-	virtual void writecurpostofile(char* file) = 0;
+	virtual void writecurpostofile(char* file, int steps, float milliseconds) = 0;
 	
 	virtual void display() = 0;
 

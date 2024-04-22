@@ -60,6 +60,65 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 
 }
 
+__global__ void update_naive_SOA(float timeDelta, int numParticles, float* positions, float* velocities, unsigned char* particleType) {
+	int gid = blockIdx.x * blockDim.x + threadIdx.x;
+	if (gid < numParticles) {
+		int part_type = particleType[gid];
+		float force_x = 0.0;
+		float force_y = 0.0;
+		float force_z = 0.0;
+		for (int j = 0; j < numParticles; j++) {
+			float dist_x = positions[gid] - positions[j];
+			float dist_y = positions[gid + numParticles] - positions[j + numParticles];
+			float dist_z = positions[gid + 2*numParticles] - positions[j + 2*numParticles];
+			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
+			float dist = sqrt(dist_square);
+			if (gid == j || dist < yukawa_cutoff) {
+				continue;
+			}
+			float force = 0.0;
+			//Coulomb force
+			force += (float)coulomb_scalar / dist_square * d_charges[part_type] * d_charges[particleType[j]];
+
+
+
+			//Strong Forces
+			//P-N close attraction N-N close attraction 
+			if (part_type != 0 && particleType[j] != 0) {
+				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+			}
+			//Break force into components
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
+		}
+
+		//Update velocities
+		velocities[gid] += force_x * d_inv_masses[part_type] * timeDelta;
+		velocities[gid + numParticles] += force_y * d_inv_masses[part_type] * timeDelta;
+		velocities[gid + 2 * numParticles] += force_z * d_inv_masses[part_type] * timeDelta;
+
+		//Update positions from velocities
+		positions[gid] += velocities[gid] * timeDelta;
+		if (abs(positions[gid]) > 1) {
+			velocities[gid] = -1 * velocities[gid];
+		}
+
+		positions[gid + numParticles] += velocities[gid + numParticles] * timeDelta;
+		if (abs(positions[gid + numParticles]) > 1) {
+			velocities[gid + numParticles] = -1 * velocities[gid + numParticles];
+		}
+
+		positions[gid + 2 * numParticles] += velocities[gid + 2 * numParticles] * timeDelta;
+		if (abs(positions[gid + 2 * numParticles]) > 1) {
+			velocities[gid + 2 * numParticles] = -1 * velocities[gid + 2 * numParticles];
+		}
+	}
+
+}
+
+
+
 
 
 ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed) {
@@ -84,18 +143,32 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 		particleType = new unsigned char[numParticles];
 
 		// Circular initialization
+		// Circular initialization
 		if (initMethod == 0) {
-				for (unsigned int i = 0; i < numParticles; i++) {
-						float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2.0 * 3.1415); // Ensure floating-point division
-						positions[i * 4] = (float)cos(theta);
-						positions[i * 4 + 1] = (float)sin(theta);
-						positions[i * 4 + 2] = 1.0f;
-						positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+			for (unsigned int i = 0; i < numParticles; i++) {
 
-						colors[i * 3] = i % 255;
-						colors[i * 3 + 1] = 255 - (i % 255);
-						colors[i * 3 + 2] = 55;
+				float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2.0 * 3.1415); // Ensure floating-point division
+				int stride, pos_offset, col_offset;
+				if (STORAGE_TYPE && !RENDER_ENABLE) {
+					stride = numParticles;
+					pos_offset = 1;
+					col_offset = 1;
 				}
+				else {
+					stride = 1;
+					pos_offset = 4;
+					col_offset = 3;
+				}
+				positions[i * pos_offset] = (float)cos(theta);
+				positions[i * pos_offset + stride] = (float)sin(theta);
+				positions[i * pos_offset + 2 * stride] = 1.0f;
+				positions[i * pos_offset + 3 * stride] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+
+				colors[i * col_offset] = i % 255;
+				colors[i * col_offset + stride] = 255 - (i % 255);
+				colors[i * col_offset + 2 * stride] = 55;
+			}
+
 		}
 		//Read from a file
 		else if (initMethod == 1) {
@@ -103,48 +176,58 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 		}
 		// Random initialization in 3 dimensions
 		else if (initMethod == 2) {
-				if (seed != -1) {
-						srand(seed);
+			if (seed != -1) {
+				srand(seed);
+			}
+			for (unsigned int i = 0; i < numParticles; i++) {
+				int stride, pos_offset, vel_offset;
+				if (STORAGE_TYPE && !RENDER_ENABLE) {
+					stride = numParticles;
+					pos_offset = 1;
+					vel_offset = 1;
 				}
-				for (unsigned int i = 0; i < numParticles; i++) {
-						// Randomly initialize position in range [-1,1)
-						positions[i * 4] = ((rand() % 2000) - 1000.0) / 1000.0;
-						positions[i * 4 + 1] = ((rand() % 2000) - 1000.0) / 1000.0;
-						positions[i * 4 + 2] = ((rand() % 2000) - 1000.0) / 1000.0;
-						positions[i * 4 + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
-
-						// Randomly initializes velocity in range [-250000,250000)
-						velocities[i * 3] = ((float)(rand() % 500) - 250.0) * 1000.0;
-						velocities[i * 3 + 1] = ((float)(rand() % 500) - 250.0) * 1000.0;
-						velocities[i * 3 + 2] = ((float)(rand() % 500) - 250.0) * 1000.0;
-
-						// Generates random number (either 0, 1, 2) from uniform dist
-						//particleType[i] = rand() % 3 % 2; 
-						particleType[i] = rand() % 3;
-						//particleType[i] = 2;
-
-						// Sets color based on particle type
-						if (particleType[i] == 0) { // If Electron
-								colors[i * 3] = ELECTRON_COLOR[0];
-								colors[i * 3 + 1] = ELECTRON_COLOR[1];
-								colors[i * 3 + 2] = ELECTRON_COLOR[2];
-						}
-						else if (particleType[i] == 1) { // If Proton
-								colors[i * 3] = PROTON_COLOR[0];
-								colors[i * 3 + 1] = PROTON_COLOR[1];
-								colors[i * 3 + 2] = PROTON_COLOR[2];
-						}
-						else {
-								colors[i * 3] = NEUTRON_COLOR[0]; //Else neutron
-								colors[i * 3 + 1] = NEUTRON_COLOR[1];
-								colors[i * 3 + 2] = NEUTRON_COLOR[2];
-						}
+				else {
+					stride = 1;
+					pos_offset = 4;
+					vel_offset = 3;
 				}
+				// Randomly initialize position in range [-1,1)
+				positions[i * pos_offset] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+				positions[i * pos_offset + stride] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+				positions[i * pos_offset + 2 * stride] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+				positions[i * pos_offset + 3 * stride] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+
+				// Randomly initializes velocity in range [-250000,250000)
+				velocities[i * vel_offset] = ((float)(rand() % 500) - 250.0) * 1000.0;
+				velocities[i * vel_offset + stride] = ((float)(rand() % 500) - 250.0) * 1000.0;
+				velocities[i * vel_offset + 2 * stride] = ((float)(rand() % 500) - 250.0) * 1000.0;
+
+				// Generates random number (either 0, 1, 2) from uniform dist
+				particleType[i] = rand() % 3;
+				//particleType[i] = 2;
+
+				// Sets color based on particle type
+				if (particleType[i] == 0) { // If Electron
+					colors[i * vel_offset] = ELECTRON_COLOR[0];
+					colors[i * vel_offset + stride] = ELECTRON_COLOR[1];
+					colors[i * vel_offset + 2 * stride] = ELECTRON_COLOR[2];
+				}
+				else if (particleType[i] == 1) { // If Proton
+					colors[i * vel_offset] = PROTON_COLOR[0];
+					colors[i * vel_offset + stride] = PROTON_COLOR[1];
+					colors[i * vel_offset + 2 * stride] = PROTON_COLOR[2];
+				}
+				else {
+					colors[i * vel_offset] = NEUTRON_COLOR[0]; //Else neutron
+					colors[i * vel_offset + stride] = NEUTRON_COLOR[1];
+					colors[i * vel_offset + 2 * stride] = NEUTRON_COLOR[2];
+				}
+			}
 		}
 		//Error bad method
 		else {
-				std::cerr << "Bad Initialization";
-		}
+			std::cerr << "Bad Initialization";
+			}
 
 #if (RENDER_ENABLE)
 			glGenVertexArrays(1, &VAO);
@@ -242,8 +325,11 @@ void ParticleSystemGPU::update(float timeDelta) {
 		cudaGraphicsMapResources(1, &positionResource, 0);
 		cudaGraphicsResourceGetMappedPointer((void**)&d_positions, &Size, positionResource);
 #endif
+#if (STORAGE_TYPE && !RENDER_ENABLE)
+		update_naive_SOA<<<gridSize, blockSize>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
+#else
 		update_naive<<<gridSize, blockSize>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
-	
+#endif
 		//std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
 
 		cudaError_t cudaStatusFlag = cudaGetLastError();
@@ -269,16 +355,24 @@ void ParticleSystemGPU::update(float timeDelta) {
 
 
 
-void ParticleSystemGPU::writecurpostofile(char* file) {
+void ParticleSystemGPU::writecurpostofile(char* file, int steps, float milliseconds) {
 		getPositions();
 		std::ofstream outfile(file);
 
 		if (outfile.is_open()) {
+			outfile << "particles:" << p_numParticles << " iterations:" << steps << " timing:" << milliseconds << " structure:" << STORAGE_TYPE << "\n";
 			for (int i = 0; i < p_numParticles; i++) {
+#if (STORAGE_TYPE && !RENDER_ENABLE)
+				outfile << positions[i] << " ";
+				outfile << positions[i + p_numParticles] << " ";
+				outfile << positions[i + 2 * p_numParticles] << " ";
+				outfile << positions[i + 3 * p_numParticles] << "\n";
+#else
 				outfile << positions[i * 4] << " ";
 				outfile << positions[i * 4 + 1] << " ";
 				outfile << positions[i * 4 + 2] << " ";
 				outfile << positions[i * 4 + 3] << "\n";
+#endif
 			}
 		}
 		else {
