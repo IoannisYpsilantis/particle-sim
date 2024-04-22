@@ -2,18 +2,16 @@
 #define __COMMON_H_
 
 //This is added to the file name - very helpful for associating runs for comparison
-constexpr int ID = 1;
+constexpr int ID = 0;
 
 // Program Controls
 #define RENDER_ENABLE (0)
 #define TIMING_ENABLE (1)
 #define GPU_ENABLE (1)
-#define SAVE_FINAL (1)
+#define SAVE_FINAL (0)
 						
 
 //Program Execution Type Specification
-#define STORAGE_TYPE (0) //0 is AOS (default) ([Point1.x, Point1.y, Point1.z, Point2.x, Point2.y ...]
-						 //1 is SOA ([Point1.x, Point2.x, ..., Point1.y, Point2.y ...]
 #define advancedGPU (0) //False is naive
 						//True is to be implemented improved GPU. (Might be handy to make this a control, it also might become an int)
 
@@ -29,7 +27,7 @@ constexpr int PROTON_COLOR[3] = { 255, 0, 0 }; // Red
 constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 
 // Environment Parameters
-constexpr int numParticles = 50000;
+constexpr int numParticles = 10000;
 constexpr int systemInitType = 2;
 constexpr int maxSteps = 100; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 constexpr int seed = 42; //Seed for run, set to 1 for random generation.

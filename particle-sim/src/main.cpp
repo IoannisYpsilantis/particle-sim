@@ -28,9 +28,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height){
 #endif
 
 int main(int argc, char** argv) {
-    if (STORAGE_TYPE && RENDER_ENABLE) {
-        std::cout << "Cannot render using SOAs defaulting to AOS" << std::endl;
-    }
+
     int steps = 0;
 
     ParticleSystem* system;
