@@ -27,13 +27,13 @@ constexpr int PROTON_COLOR[3] = { 255, 0, 0 }; // Red
 constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 
 // Environment Parameters
-constexpr int numParticles = 10000;
+constexpr int numParticles = 2500;
 constexpr int systemInitType = 2;
 constexpr int maxSteps = -1; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 constexpr int seed = 42; //Seed for run, set to 1 for random generation.
 constexpr float timeStep = 1e-7;
 constexpr float dampingFactor = 0.999;
-constexpr int boundingBox = 1000; //The size of the problem NOTE* NEED TO UPDATE shaderclass.cpp if you change this value!
+constexpr int boundingBox = 500; //The size of the problem NOTE* NEED TO UPDATE shaderclass.cpp if you change this value!
 
 // More Constants :)
 constexpr float inv_masses[] = { 1.836152673e3, 1.0, 1.0 }; //This is in AU (1AU ~ 1 proton ~ 1 nuetron.

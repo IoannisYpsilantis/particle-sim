@@ -11,7 +11,7 @@ const char vertexShaderSource[] = { "#version 330 core\n"
 "out vec3 vertexColor;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = aPos / 1000.0;\n" //THE DIVISOR HERE SHOULD MATCH THE BOUNDINGBOX VARIABLE IN COMMON.H
+"   gl_Position = aPos;\n"
 "   vertexColor = color / 255.0;\n"
 "}" };
 
