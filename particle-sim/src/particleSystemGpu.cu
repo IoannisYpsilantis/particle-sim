@@ -44,17 +44,17 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 
 		//Update positions from velocities
 		positions[gid * 4] += velocities[gid * 3] * timeDelta;
-		if (abs(positions[gid * 4]) > 1) {
+		if (abs(positions[gid * 4]) > boundingBox) {
 			velocities[gid * 3] = -1 * velocities[gid * 3];
 		}
 		
 		positions[gid * 4 + 1] += velocities[gid * 3 + 1] * timeDelta;
-		if (abs(positions[gid * 4 + 1]) > 1) {
+		if (abs(positions[gid * 4 + 1]) > boundingBox) {
 			velocities[gid * 3 + 1] = -1 * velocities[gid * 3 + 1];
 		}
 
 		positions[gid * 4 + 2] += velocities[gid * 3 + 2] * timeDelta;
-		if (abs(positions[gid * 4 + 2]) > 1) {
+		if (abs(positions[gid * 4 + 2]) > boundingBox) {
 			velocities[gid * 3 + 2] = -1 * velocities[gid * 3 + 2];
 		}
 	}
@@ -93,10 +93,10 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 				float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2.0 * 3.1415); // Ensure floating-point division
 				int pos_offset = 4;
 			    int col_offset = 3;
-				positions[i * pos_offset] = (float)cos(theta);
-				positions[i * pos_offset + 1] = (float)sin(theta);
-				positions[i * pos_offset + 2] = 1.0f;
-				positions[i * pos_offset + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+				positions[i * pos_offset] = (float)cos(theta) * boundingBox;
+				positions[i * pos_offset + 1] = (float)sin(theta) * boundingBox;
+				positions[i * pos_offset + 2] = 1.0f * boundingBox;
+				positions[i * pos_offset + 3] = 1.0f * boundingBox; // This will always stay as 1, it will be used for mapping 3D to 2D space
 
 				colors[i * col_offset] = i % 255;
 				colors[i * col_offset + 1] = 255 - (i % 255);
@@ -115,27 +115,27 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 			for (unsigned int i = 0; i < it; i++) {
 
 				//Pair up protons and neutrons
-				float pos_X = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-				float pos_Y = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-				float pos_Z = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+				float pos_X = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
+				float pos_Y = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
+				float pos_Z = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 
 				positions[i * pos_offset] = pos_X;
-				positions[(i + it) * pos_offset] = (float)(pos_X + 1e-6);
+				positions[(i + it) * pos_offset] = (float)(pos_X + yukawa_radius);
 
 				positions[i * pos_offset + 1] = pos_Y;
-				positions[(i + it) * pos_offset + 1] = (float)(pos_Y + 1e-6);
+				positions[(i + it) * pos_offset + 1] = (float)(pos_Y + yukawa_radius);
 
 				positions[i * pos_offset + 2] = pos_Z;
-				positions[(i + it) * pos_offset + 2] = (float)(pos_Z + 1e-6);
+				positions[(i + it) * pos_offset + 2] = (float)(pos_Z + yukawa_radius);
 
 				particleType[i] = 1;
 				particleType[i + it] = 2;
 			}
 			//Scatter in some electrons
 			for (unsigned int i = 2 * it - 1; i < numParticles; i++) {
-				positions[i * pos_offset] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-				positions[i * pos_offset + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-				positions[i * pos_offset + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+				positions[i * pos_offset] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
+				positions[i * pos_offset + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
+				positions[i * pos_offset + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 
 				particleType[i] = 0;
 			}
@@ -143,7 +143,7 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 			//Initialize velocities to 0 and give particales the proper color.
 			for (unsigned int i = 0; i < numParticles; i++) {
 				
-				positions[i * pos_offset + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+				positions[i * pos_offset + 3] = 1.0f * boundingBox; // This will always stay as 1, it will be used for mapping 3D to 2D space
 
 				velocities[i * vel_offset] = 0;
 				velocities[i * vel_offset + 1] = 0;
@@ -177,10 +177,10 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 				int pos_offset = 4;
 				int vel_offset = 3;
 				// Randomly initialize position in range [-1,1)
-				positions[i * pos_offset] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-				positions[i * pos_offset + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-				positions[i * pos_offset + 2 ] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
-				positions[i * pos_offset + 3 ] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+				positions[i * pos_offset] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
+				positions[i * pos_offset + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
+				positions[i * pos_offset + 2 ] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
+				positions[i * pos_offset + 3 ] = 1.0f * boundingBox; // This will always stay as 1, it will be used for mapping 3D to 2D space
 
 				// Randomly initializes velocity in range [-250000,250000)
 				velocities[i * vel_offset] = ((float)(rand() % 500) - 250.0) * 1000.0;
