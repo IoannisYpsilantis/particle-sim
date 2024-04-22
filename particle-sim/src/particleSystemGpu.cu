@@ -104,9 +104,69 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 			}
 
 		}
-		//Read from a file
+		//Hydrogen atoms
 		else if (initMethod == 1) {
+			if (seed != -1) {
+				srand(seed);
+			}
+			int it = numParticles / 3;
+			int pos_offset = 4;
+			int vel_offset = 3;
+			for (unsigned int i = 0; i < it; i++) {
 
+				//Pair up protons and neutrons
+				float pos_X = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+				float pos_Y = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+				float pos_Z = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+
+				positions[i * pos_offset] = pos_X;
+				positions[(i + it) * pos_offset] = (float)(pos_X + 1e-6);
+
+				positions[i * pos_offset + 1] = pos_Y;
+				positions[(i + it) * pos_offset + 1] = (float)(pos_Y + 1e-6);
+
+				positions[i * pos_offset + 2] = pos_Z;
+				positions[(i + it) * pos_offset + 2] = (float)(pos_Z + 1e-6);
+
+				particleType[i] = 1;
+				particleType[i + it] = 2;
+			}
+			//Scatter in some electrons
+			for (unsigned int i = 2 * it - 1; i < numParticles; i++) {
+				positions[i * pos_offset] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+				positions[i * pos_offset + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+				positions[i * pos_offset + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0;
+
+				particleType[i] = 0;
+			}
+
+			//Initialize velocities to 0 and give particales the proper color.
+			for (unsigned int i = 0; i < numParticles; i++) {
+				
+				positions[i * pos_offset + 3] = 1.0f; // This will always stay as 1, it will be used for mapping 3D to 2D space
+
+				velocities[i * vel_offset] = 0;
+				velocities[i * vel_offset + 1] = 0;
+				velocities[i * vel_offset + 2] = 0;
+
+				// Sets color based on particle type
+				if (particleType[i] == 0) { // If Electron
+					colors[i * vel_offset] = ELECTRON_COLOR[0];
+					colors[i * vel_offset + 1] = ELECTRON_COLOR[1];
+					colors[i * vel_offset + 2] = ELECTRON_COLOR[2];
+				}
+				else if (particleType[i] == 1) { // If Proton
+					colors[i * vel_offset] = PROTON_COLOR[0];
+					colors[i * vel_offset + 1] = PROTON_COLOR[1];
+					colors[i * vel_offset + 2] = PROTON_COLOR[2];
+				}
+				else {
+					colors[i * vel_offset] = NEUTRON_COLOR[0]; //Else neutron
+					colors[i * vel_offset + 1] = NEUTRON_COLOR[1];
+					colors[i * vel_offset + 2] = NEUTRON_COLOR[2];
+				}
+
+			}
 		}
 		// Random initialization in 3 dimensions
 		else if (initMethod == 2) {
