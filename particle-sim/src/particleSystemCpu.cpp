@@ -215,9 +215,7 @@ void ParticleSystemCPU::update(float timeDelta) {
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
 			if (part_type != 0 && particleType[j] != 0) {
-				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
-				//std::cout << dist << std::endl;
-				//std::cout << yukawa_scalar * exp(-dist / yukawa_radius) / dist << std::endl;
+				force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
 			}
 
 			force_x += force * dist_x / dist;
@@ -280,7 +278,7 @@ void ParticleSystemCPU::display() {
 
 		shaderProgram->Activate();
 
-		glPointSize(5.0);
+		glPointSize(2.0);
 
 		glDrawArrays(GL_POINTS, 0, p_numParticles);
 #endif

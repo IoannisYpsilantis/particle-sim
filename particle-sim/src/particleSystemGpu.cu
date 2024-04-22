@@ -28,7 +28,7 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
 			if (part_type != 0 && particleType[j] != 0) {
-				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
 			}
 			//Break force into components
 			force_x += force * dist_x / dist;
