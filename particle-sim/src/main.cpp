@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 #else
-    if (max_steps < 0) {
+    if (maxSteps < 0) {
       printf("Warning: Can only exit program via ctrl-c. This is not recommended unless testing code.\n");
     }
 #endif
@@ -91,8 +91,8 @@ int main(int argc, char** argv) {
 #endif
     
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
-    while (steps != max_steps) {
-        system->update(1e-9);
+    while (steps != maxSteps) {
+        system->update(timeStep);
 
         steps++;
 

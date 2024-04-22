@@ -93,7 +93,7 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
 		glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int) * 3 * numParticles, colors, GL_STREAM_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int) * 3 * numParticles, colors, GL_STATIC_DRAW);
 		glVertexAttribIPointer(1, 3, GL_UNSIGNED_INT, 0, (void*)0);
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);

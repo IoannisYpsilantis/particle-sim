@@ -2,8 +2,8 @@
 #define __COMMON_H_
 
 // Program Controls
-#define RENDER_ENABLE (1)
-#define TIMING_ENABLE (0)
+#define RENDER_ENABLE (0)
+#define TIMING_ENABLE (1)
 #define GPU_ENABLE (1)
 #define SAVE_FINAL (0)
 
@@ -19,10 +19,11 @@ constexpr int PROTON_COLOR[3] = { 255, 0, 0 }; // Red
 constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 
 // Environment Parameters
-constexpr int numParticles = 1000;
+constexpr int numParticles = 10000;
 constexpr int systemInitType = 2;
-constexpr int max_steps = -1; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
+constexpr int maxSteps = 100; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 constexpr int seed = 42; //Seed for run, set to 1 for random generation.
+constexpr float timeStep = 1e-9;
 
 // More Constants :)
 constexpr float inv_masses[] = { 1.836152673e3, 1.0, 1.0 }; //This is in AU (1AU ~ 1 proton ~ 1 nuetron.
