@@ -150,7 +150,7 @@ void ParticleSystemCPU::update(float timeDelta) {
 			}
 			
 			//Natural Coloumb force
-			force += (float) coulomb_scalar / dist_square * charges[part_type] * charges[particleType[j]];
+			force += (float) coulomb_scalar / dist * charges[part_type] * charges[particleType[j]];
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
@@ -166,9 +166,11 @@ void ParticleSystemCPU::update(float timeDelta) {
 		}
 
 		//Update velocities 
-		velocities[i*3] += force_x * inv_masses[part_type] * timeDelta;
-		velocities[i*3 + 1] += force_y * inv_masses[part_type] * timeDelta;
-		velocities[i*3 + 2] += force_z * inv_masses[part_type] * timeDelta;
+		velocities[i*3] += force_x * inv_masses[part_type] * timeDelta * dampingFactor;
+		velocities[i*3 + 1] += force_y * inv_masses[part_type] * timeDelta * dampingFactor;
+		velocities[i*3 + 2] += force_z * inv_masses[part_type] * timeDelta * dampingFactor;
+
+
 
 		//Update positions from velocities
 		positions[i * 4] += velocities[i * 3] * timeDelta;

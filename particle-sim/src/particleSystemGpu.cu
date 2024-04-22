@@ -21,7 +21,7 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 			}
 			float force = 0.0;
 			//Coulomb force
-			force += (float)coulomb_scalar / dist_square * d_charges[part_type] * d_charges[particleType[j]];
+			force += (float)coulomb_scalar / dist * d_charges[part_type] * d_charges[particleType[j]];
 			
 			
 
@@ -37,9 +37,10 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 		}
 
 		//Update velocities
-		velocities[gid*3] += force_x * d_inv_masses[part_type] * timeDelta;
-		velocities[gid*3 + 1] += force_y * d_inv_masses[part_type] * timeDelta;
-		velocities[gid*3 + 2] += force_z * d_inv_masses[part_type] * timeDelta;
+		velocities[gid*3] += force_x * d_inv_masses[part_type] * timeDelta * dampingFactor;
+		velocities[gid*3 + 1] += force_y * d_inv_masses[part_type] * timeDelta * dampingFactor;
+		velocities[gid*3 + 2] += force_z * d_inv_masses[part_type] * timeDelta * dampingFactor;
+
 
 		//Update positions from velocities
 		positions[gid * 4] += velocities[gid * 3] * timeDelta;

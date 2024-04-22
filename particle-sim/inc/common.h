@@ -2,13 +2,13 @@
 #define __COMMON_H_
 
 //This is added to the file name - very helpful for associating runs for comparison
-constexpr int ID = 0;
+constexpr int ID = 10;
 
 // Program Controls
 #define RENDER_ENABLE (0)
 #define TIMING_ENABLE (1)
 #define GPU_ENABLE (1)
-#define SAVE_FINAL (0)
+#define SAVE_FINAL (1)
 						
 
 //Program Execution Type Specification
@@ -27,11 +27,12 @@ constexpr int PROTON_COLOR[3] = { 255, 0, 0 }; // Red
 constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 
 // Environment Parameters
-constexpr int numParticles = 10000;
+constexpr int numParticles = 500;
 constexpr int systemInitType = 2;
 constexpr int maxSteps = 100; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 constexpr int seed = 42; //Seed for run, set to 1 for random generation.
 constexpr float timeStep = 1e-9;
+constexpr float dampingFactor = 0.999;
 
 // More Constants :)
 constexpr float inv_masses[] = { 1.836152673e3, 1.0, 1.0 }; //This is in AU (1AU ~ 1 proton ~ 1 nuetron.
@@ -41,6 +42,6 @@ constexpr float charges[] = { -1.0, 1.0, 0.0 };
 constexpr float coulomb_scalar = 1.381228459e8; //AU*nanometers^3/second^2
 constexpr float yukawa_scalar = 1.177325499e9;    //Experimentally obtained - AU*nanometers^3/second^2
 constexpr float yukawa_radius = 1.4e-6;			 //Radius of strength.
-constexpr float yukawa_cutoff = 1e-6;          //Sweet spot. (Strong force likes to be between 0.8 and 1.4 fm.
+constexpr float yukawa_cutoff = 0.8e-6;          //Sweet spot. (Strong force likes to be between 0.8 and 1.4 fm.
 
 #endif
