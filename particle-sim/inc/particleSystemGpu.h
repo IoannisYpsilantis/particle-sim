@@ -32,7 +32,7 @@ public:
 
 	void update(float timeDelta);
 
-	void writecurpostofile(char* file);
+	void writecurpostofile(char* file, int steps, float milliseconds);
 
 	void display();
 
