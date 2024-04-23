@@ -222,9 +222,6 @@ void ParticleSystemCPU::update(float timeDelta) {
 					force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
 				}
 				
-				if (part_type == 2 && dist < 50) {
-					std::cout << force << std::endl;
-				}
 
 
 			}
@@ -237,9 +234,13 @@ void ParticleSystemCPU::update(float timeDelta) {
 		}
 
 		//Update velocities 
-		velocities[i * 3] += force_x * inv_masses[part_type] * timeDelta * dampingFactor;
-		velocities[i * 3 + 1] += force_y * inv_masses[part_type] * timeDelta * dampingFactor;
-		velocities[i * 3 + 2] += force_z * inv_masses[part_type] * timeDelta * dampingFactor;
+		velocities[i * 3] += force_x * inv_masses[part_type] * timeDelta;
+		velocities[i * 3 + 1] += force_y * inv_masses[part_type] * timeDelta;
+		velocities[i * 3 + 2] += force_z * inv_masses[part_type] * timeDelta;
+
+		velocities[i * 3] *= dampingFactor;
+		velocities[i * 3 + 1] *= dampingFactor;
+		velocities[i * 3 + 2] *= dampingFactor;
 	}
 
 	for (int i = 0; i < p_numParticles; i++) {

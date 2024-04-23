@@ -11,9 +11,9 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 		float force_y = 0.0;
 		float force_z = 0.0;
 		for (int j = 0; j < numParticles; j++) {
-			float dist_x = positions[gid*4] - positions[j*4];
-			float dist_y = positions[gid*4 + 1] - positions[j*4 + 1];
-			float dist_z = positions[gid*4 + 2] - positions[j*4 + 2];
+			float dist_x = positions[gid * 4] - positions[j * 4];
+			float dist_y = positions[gid * 4 + 1] - positions[j * 4 + 1];
+			float dist_z = positions[gid * 4 + 2] - positions[j * 4 + 2];
 			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
 			float dist = sqrt(dist_square);
 			if (gid == j) {
@@ -22,8 +22,8 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 			float force = 0.0;
 			//Coulomb force
 			force += (float)coulomb_scalar / dist * d_charges[part_type] * d_charges[particleType[j]];
-			
-			
+
+
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
@@ -34,7 +34,7 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 				else {
 					force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
 				}
-				
+
 			}
 			//Break force into components
 			force_x += force * dist_x / dist;
@@ -43,28 +43,34 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 		}
 
 		//Update velocities
-		velocities[gid*3] += force_x * d_inv_masses[part_type] * timeDelta * dampingFactor;
-		velocities[gid*3 + 1] += force_y * d_inv_masses[part_type] * timeDelta * dampingFactor;
-		velocities[gid*3 + 2] += force_z * d_inv_masses[part_type] * timeDelta * dampingFactor;
+		velocities[gid * 3] += force_x * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 1] += force_y * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 2] += force_z * d_inv_masses[part_type] * timeDelta;
 
-
-		//Update positions from velocities
-		positions[gid * 4] += velocities[gid * 3] * timeDelta;
-		if (abs(positions[gid * 4]) > boundingBox) {
-			velocities[gid * 3] = -1 * velocities[gid * 3];
-		}
-		
-		positions[gid * 4 + 1] += velocities[gid * 3 + 1] * timeDelta;
-		if (abs(positions[gid * 4 + 1]) > boundingBox) {
-			velocities[gid * 3 + 1] = -1 * velocities[gid * 3 + 1];
-		}
-
-		positions[gid * 4 + 2] += velocities[gid * 3 + 2] * timeDelta;
-		if (abs(positions[gid * 4 + 2]) > boundingBox) {
-			velocities[gid * 3 + 2] = -1 * velocities[gid * 3 + 2];
-		}
+		velocities[gid * 3] *= dampingFactor;
+		velocities[gid * 3 + 1] *= dampingFactor;
+		velocities[gid * 3 + 2] *= dampingFactor;
 	}
 
+}
+
+__global__ void update_positions(float timeDelta, float * positions, float *velocities) {
+	int gid = blockIdx.x * blockDim.x + threadIdx.x;
+	//Update positions from velocities
+	positions[gid * 4] += velocities[gid * 3] * timeDelta;
+	if (abs(positions[gid * 4]) > boundingBox) {
+		velocities[gid * 3] = -1 * velocities[gid * 3];
+	}
+		
+	positions[gid * 4 + 1] += velocities[gid * 3 + 1] * timeDelta;
+	if (abs(positions[gid * 4 + 1]) > boundingBox) {
+		velocities[gid * 3 + 1] = -1 * velocities[gid * 3 + 1];
+	}
+
+	positions[gid * 4 + 2] += velocities[gid * 3 + 2] * timeDelta;
+	if (abs(positions[gid * 4 + 2]) > boundingBox) {
+		velocities[gid * 3 + 2] = -1 * velocities[gid * 3 + 2];
+	}
 }
 
 
@@ -318,6 +324,7 @@ void ParticleSystemGPU::update(float timeDelta) {
 #endif
 		update_naive<<<gridSize, blockSize>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
 
+		update_positions<<<gridSize, blockSize>>>(timeDelta, d_positions, d_velocities);
 		//std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
 
 		cudaError_t cudaStatusFlag = cudaGetLastError();
