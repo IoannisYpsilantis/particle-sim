@@ -53,13 +53,13 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 				float pos_Z = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 
 				positions[i * pos_offset] = pos_X;
-				positions[(i + it) * pos_offset] = (float) (pos_X + 1e-6);
+				positions[(i + it) * pos_offset] = (float) (pos_X + yukawa_radius);
 
 				positions[i * pos_offset + 1] = pos_Y;
-				positions[(i + it) * pos_offset + 1] = (float)(pos_Y + 1e-6);
+				positions[(i + it) * pos_offset + 1] = (float)(pos_Y + yukawa_radius);
 
 				positions[i * pos_offset + 2] = pos_Z;
-				positions[(i + it) * pos_offset + 2] = (float)(pos_Z + 1e-6);
+				positions[(i + it) * pos_offset + 2] = (float)(pos_Z + yukawa_radius);
 				
 				particleType[i] = 1;
 				particleType[i + it] = 2;
@@ -216,6 +216,11 @@ void ParticleSystemCPU::update(float timeDelta) {
 			//P-N close attraction N-N close attraction 
 			if (part_type != 0 && particleType[j] != 0) {
 				force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				if (part_type == 2 && dist < 100) {
+					std::cout << force << std::endl;
+				}
+
+				
 			}
 
 			force_x += force * dist_x / dist;
@@ -231,7 +236,7 @@ void ParticleSystemCPU::update(float timeDelta) {
 		velocities[i*3 + 2] += force_z * inv_masses[part_type] * timeDelta * dampingFactor;
 
 
-
+		
 		//Update positions from velocities
 		positions[i * 4] += velocities[i * 3] * timeDelta;
 		if (abs(positions[i * 4]) > boundingBox) {
