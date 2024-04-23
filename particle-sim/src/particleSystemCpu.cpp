@@ -198,29 +198,35 @@ void ParticleSystemCPU::update(float timeDelta) {
 		float force_y = 0.0f;
 		float force_z = 0.0f;
 		for (int j = 0; j < p_numParticles; j++) {
-			float dist_x = positions[i*4] - positions[j*4];
-			float dist_y = positions[i*4 + 1] - positions[j*4 + 1];
-			float dist_z = positions[i*4 + 2] - positions[j*4 + 2];
+			float dist_x = positions[i * 4] - positions[j * 4];
+			float dist_y = positions[i * 4 + 1] - positions[j * 4 + 1];
+			float dist_z = positions[i * 4 + 2] - positions[j * 4 + 2];
 
 			float dist_square = square(dist_x) + square(dist_y) + square(dist_z);
 			float dist = sqrt(dist_square);
 			float force = 0.0f;
-			if (i == j || dist < yukawa_cutoff) {
+			if (i == j) {
 				continue;
 			}
-			
+
 			//Natural Coloumb force
-			force += (float) coulomb_scalar / dist * charges[part_type] * charges[particleType[j]];
+			force += (float)coulomb_scalar / dist * charges[part_type] * charges[particleType[j]];
 
 			//Strong Forces
 			//P-N close attraction N-N close attraction 
 			if (part_type != 0 && particleType[j] != 0) {
-				force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
-				if (part_type == 2 && dist < 100) {
+				if (dist < yukawa_cutoff) {
+					force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				}
+				else {
+					force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				}
+				
+				if (part_type == 2 && dist < 50) {
 					std::cout << force << std::endl;
 				}
 
-				
+
 			}
 
 			force_x += force * dist_x / dist;
@@ -229,15 +235,15 @@ void ParticleSystemCPU::update(float timeDelta) {
 
 
 		}
-		
+
 		//Update velocities 
-		velocities[i*3] += force_x * inv_masses[part_type] * timeDelta * dampingFactor;
-		velocities[i*3 + 1] += force_y * inv_masses[part_type] * timeDelta * dampingFactor;
-		velocities[i*3 + 2] += force_z * inv_masses[part_type] * timeDelta * dampingFactor;
+		velocities[i * 3] += force_x * inv_masses[part_type] * timeDelta * dampingFactor;
+		velocities[i * 3 + 1] += force_y * inv_masses[part_type] * timeDelta * dampingFactor;
+		velocities[i * 3 + 2] += force_z * inv_masses[part_type] * timeDelta * dampingFactor;
+	}
 
-
-		
-		//Update positions from velocities
+	for (int i = 0; i < p_numParticles; i++) {
+		//Update positions from velocities only after all velocities were considered
 		positions[i * 4] += velocities[i * 3] * timeDelta;
 		if (abs(positions[i * 4]) > boundingBox) {
 			velocities[i * 3] = -1 * velocities[i * 3];

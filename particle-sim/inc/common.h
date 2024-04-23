@@ -7,7 +7,7 @@ constexpr int ID = 1;
 // Program Controls
 #define RENDER_ENABLE (1)
 #define TIMING_ENABLE (1)
-#define GPU_ENABLE (0)
+#define GPU_ENABLE (1)
 #define SAVE_FINAL (0)
 						
 
@@ -24,13 +24,13 @@ constexpr int PROTON_COLOR[3] = { 255, 0, 0 }; // Red
 constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 
 // Environment Parameters
-constexpr int numParticles = 100;
+constexpr int numParticles = 250;
 constexpr int systemInitType = 1;
 constexpr int maxSteps = -1; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 constexpr int seed = 42; //Seed for run, set to 1 for random generation.
-constexpr float timeStep = 1e-6;
-constexpr float dampingFactor = 0.999;
-constexpr int boundingBox = 50000; //The size of the problem
+constexpr float timeStep = 1e-9;
+constexpr float dampingFactor = 0.99;
+constexpr int boundingBox = 100000; //The size of the problem
 
 //Given timeStep is 1e-7 it seems have numParticles = 5 * boundingBox is pretty good.
 
