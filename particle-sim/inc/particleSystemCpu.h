@@ -32,6 +32,8 @@ public:
 
 		void update(float timeDelta);// Possibly don't need to redeclare this here cause its in particleSystem.h
 
+		void flip();
+
 		void writecurpostofile(char* file, int steps, float milliseconds);// Possibly don't need to redeclare this here cause its in particleSystem.h
 
 		void display(); // Possibly don't need to redeclare this here cause its in particleSystem.h

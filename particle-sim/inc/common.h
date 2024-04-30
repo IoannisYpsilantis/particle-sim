@@ -12,6 +12,7 @@ constexpr int ID = 1;
 						
 
 //Program Execution Type Specification
+#define doubleBuffer (0) //Whether to double buffer positions or not.
 #define binningGPU (0) //False is naive
 						//True is to be implemented improved GPU. (Might be handy to make this a control, it also might become an int)
 

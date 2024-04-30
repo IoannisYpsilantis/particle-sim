@@ -32,6 +32,8 @@ public:
 
 	void update(float timeDelta);
 
+	void flip();
+
 	void writecurpostofile(char* file, int steps, float milliseconds);
 
 	void display();

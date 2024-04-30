@@ -6,6 +6,9 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 		// Initialize Positions array
 		int positionElementsCount = 4 * numParticles;
 		positions = new float[positionElementsCount];
+#if doubleBuffer
+		postions2 = new float[positionElementsCount];
+#endif
 
 		// Initialize Colors array
 		int colorElementsCount = 3 * numParticles;
@@ -146,6 +149,15 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 		else {
 				std::cerr << "Bad Initialization";
 		}
+
+#if (doubleBuffer)
+		src = positions;
+		dst = positions2;
+#else
+		src = positions;
+		dst = positions;
+#endif // 
+
 #if (RENDER_ENABLE)
 		glGenVertexArrays(1, &VAO);
 
@@ -190,7 +202,7 @@ float square(float val) {
 	return pow(val, 2);
 }
 
-void ParticleSystemCPU::update(float timeDelta) {
+void ParticleSystemCPU::update(float timeDelta, float* src, float* dst) {
 	for (int i = 0; i < p_numParticles; i++) {
 		//Update velocities
 		int part_type = particleType[i];
@@ -198,9 +210,9 @@ void ParticleSystemCPU::update(float timeDelta) {
 		float force_y = 0.0f;
 		float force_z = 0.0f;
 		for (int j = 0; j < p_numParticles; j++) {
-			float dist_x = positions[i * 4] - positions[j * 4];
-			float dist_y = positions[i * 4 + 1] - positions[j * 4 + 1];
-			float dist_z = positions[i * 4 + 2] - positions[j * 4 + 2];
+			float dist_x = src[i * 4] - src[j * 4];
+			float dist_y = src[i * 4 + 1] - src[j * 4 + 1];
+			float dist_z = src[i * 4 + 2] - src[j * 4 + 2];
 
 			float dist_square = square(dist_x) + square(dist_y) + square(dist_z);
 			float dist = sqrt(dist_square);
@@ -245,19 +257,25 @@ void ParticleSystemCPU::update(float timeDelta) {
 
 	for (int i = 0; i < p_numParticles; i++) {
 		//Update positions from velocities only after all velocities were considered
-		positions[i * 4] += velocities[i * 3] * timeDelta;
-		if (abs(positions[i * 4]) > boundingBox) {
+		dst[i * 4] += velocities[i * 3] * timeDelta;
+		if (abs(dst[i * 4]) > boundingBox) {
 			velocities[i * 3] = -1 * velocities[i * 3];
 		}
-		positions[i * 4 + 1] += velocities[i * 3 + 1] * timeDelta;
-		if (abs(positions[i * 4 + 1]) > boundingBox) {
+		dst[i * 4 + 1] += velocities[i * 3 + 1] * timeDelta;
+		if (abs(dst[i * 4 + 1]) > boundingBox) {
 			velocities[i * 3 + 1] = -1 * velocities[i * 3 + 1];
 		}
-		positions[i * 4 + 2] += velocities[i * 3 + 2] * timeDelta;
-		if (abs(positions[i * 4 + 2]) > boundingBox) {
+		dst[i * 4 + 2] += velocities[i * 3 + 2] * timeDelta;
+		if (abs(dst[i * 4 + 2]) > boundingBox) {
 			velocities[i * 3 + 2] = -1 * velocities[i * 3 + 2];
 		}
 	}
+}
+
+void ParticleSystemCPU::flip() {
+	float* temp = dst;
+	dst = src;
+	src = temp;
 }
 
 void ParticleSystemCPU::writecurpostofile(char* file, int steps, float milliseconds) {
@@ -282,7 +300,7 @@ void ParticleSystemCPU::display() {
 #if (RENDER_ENABLE)
 		//Update the positions
 		glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * p_numParticles, positions, GL_STREAM_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * p_numParticles, dst, GL_STREAM_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);

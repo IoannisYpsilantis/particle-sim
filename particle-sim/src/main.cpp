@@ -90,10 +90,18 @@ int main(int argc, char** argv) {
 #endif
 #endif
     
+#if (doubleBuffer) 
+
+#else
+
+#endif
     //This loop runs until the window is closed (or I guess if we make the program exit somehow)
     while (steps != maxSteps) {
         system->update(timeStep);
 
+#if (doubleBuffer)
+        system->flip();
+#endif
         steps++;
 
 
