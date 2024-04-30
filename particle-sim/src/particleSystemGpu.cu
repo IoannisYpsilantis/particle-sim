@@ -4,6 +4,7 @@ __constant__ float d_inv_masses[3];
 __constant__ float d_charges[3];
 
 __global__ void update_naive(float timeDelta, int numParticles, float* positions, float* velocities, unsigned char* particleType) {
+	
 	int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	if (gid < numParticles) {
 		int part_type = particleType[gid];
@@ -74,10 +75,78 @@ __global__ void update_positions(float timeDelta, float * positions, float *velo
 }
 
 
+__global__ void update_doubleBuffer(float timeDelta, int numParticles, float* src, float* dst, float* velocities, unsigned char* particleType) {
+	int gid = blockIdx.x * blockDim.x + threadIdx.x;
+	if (gid < numParticles) {
+		int part_type = particleType[gid];
+		float force_x = 0.0;
+		float force_y = 0.0;
+		float force_z = 0.0;
+		for (int j = 0; j < numParticles; j++) {
+			float dist_x = src[gid * 4] - src[j * 4];
+			float dist_y = src[gid * 4 + 1] - src[j * 4 + 1];
+			float dist_z = src[gid * 4 + 2] - src[j * 4 + 2];
+			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
+			float dist = sqrt(dist_square);
+			if (gid == j) {
+				continue;
+			}
+			float force = 0.0;
+			//Coulomb force
+			force += (float)coulomb_scalar / dist * d_charges[part_type] * d_charges[particleType[j]];
+
+
+
+			//Strong Forces
+			//P-N close attraction N-N close attraction 
+			if (part_type != 0 && particleType[j] != 0) {
+				if (dist < yukawa_cutoff) {
+					force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				}
+				else {
+					force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				}
+
+			}
+			//Break force into components
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
+		}
+
+		//Update velocities
+		velocities[gid * 3] += force_x * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 1] += force_y * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 2] += force_z * d_inv_masses[part_type] * timeDelta;
+
+		velocities[gid * 3] *= dampingFactor;
+		velocities[gid * 3 + 1] *= dampingFactor;
+		velocities[gid * 3 + 2] *= dampingFactor;
+
+		dst[gid * 4] = src[gid * 4] + velocities[gid * 3] * timeDelta;
+		if (abs(dst[gid * 4]) > boundingBox) {
+			velocities[gid * 3] = -1 * velocities[gid * 3];
+		}
+
+		dst[gid * 4 + 1] = src[gid * 4 + 1] + velocities[gid * 3 + 1] * timeDelta;
+		if (abs(dst[gid * 4 + 1]) > boundingBox) {
+			velocities[gid * 3 + 1] = -1 * velocities[gid * 3 + 1];
+		}
+
+		dst[gid * 4 + 2] = src[gid * 4 + 2] +  velocities[gid * 3 + 2] * timeDelta;
+		if (abs(dst[gid * 4 + 2]) > boundingBox) {
+			velocities[gid * 3 + 2] = -1 * velocities[gid * 3 + 2];
+		}
+	}
+
+}
+
 
 
 ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed) {
 		p_numParticles = numParticles;
+		
+		buf = false; //Note: this is used for doubleBuffering
 
 		blockSize = TILE_SIZE;
 		gridSize = (int)ceil((float)numParticles / (float)TILE_SIZE);
@@ -260,6 +329,15 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 #else
 		cudaMalloc(&d_positions, positionElementsCount * sizeof(float));
 		cudaMemcpy(d_positions, positions, positionElementsCount * sizeof(float), cudaMemcpyHostToDevice);
+#if (doubleBuffer)
+		
+		cudaMalloc(&d_positions2, positionElementsCount * sizeof(float));
+		cudaMemcpy(d_positions2, positions, positionElementsCount * sizeof(float), cudaMemcpyHostToDevice);
+		src = d_positions;
+		dst = d_positions2;
+		
+#endif
+
 #endif
 
 		cudaMalloc(&d_velocities, velocityElementsCount * sizeof(float));
@@ -282,9 +360,15 @@ float* ParticleSystemGPU::getPositions() {
 		cudaGraphicsMapResources(1, &positionResource, 0);
 		cudaGraphicsResourceGetMappedPointer((void**)&d_positions, &Size, positionResource);
 #endif
-	
+
 		int numBytes = p_numParticles * 4 * sizeof(float);
-		cudaMemcpy(positions, d_positions, numBytes, cudaMemcpyDeviceToHost);
+		if (buf) {
+			cudaMemcpy(positions, d_positions2, numBytes, cudaMemcpyDeviceToHost);
+		}
+		else {
+			cudaMemcpy(positions, d_positions, numBytes, cudaMemcpyDeviceToHost);
+		}
+		
 
 #if (RENDER_ENABLE)
 		cudaGraphicsUnmapResources(1, &positionResource, 0);
@@ -322,11 +406,14 @@ void ParticleSystemGPU::update(float timeDelta) {
 		cudaGraphicsMapResources(1, &positionResource, 0);
 		cudaGraphicsResourceGetMappedPointer((void**)&d_positions, &Size, positionResource);
 #endif
+#if (doubleBuffer)
+		update_doubleBuffer<<<gridSize, blockSize>>>(timeDelta, p_numParticles, src, dst, d_velocities, d_particleType);
+#else
 		update_naive<<<gridSize, blockSize>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
 
 		update_positions<<<gridSize, blockSize>>>(timeDelta, d_positions, d_velocities);
 		//std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
-
+#endif
 		cudaError_t cudaStatusFlag = cudaGetLastError();
 		if (cudaStatusFlag != cudaSuccess) {
 			std::cerr << "Kernel failed: " << cudaGetErrorString(cudaStatusFlag) << std::endl;
@@ -349,7 +436,11 @@ void ParticleSystemGPU::update(float timeDelta) {
 }
 
 void ParticleSystemGPU::flip() {
-	//To do
+	float* temp;
+	temp = dst;
+	dst = src;
+	src = temp;
+	buf = !buf;
 }
 
 
@@ -359,7 +450,7 @@ void ParticleSystemGPU::writecurpostofile(char* file, int steps, float milliseco
 		std::ofstream outfile(file);
 
 		if (outfile.is_open()) {
-			outfile << "particles:" << p_numParticles << " iterations:" << steps << " timing:" << milliseconds << "\n";
+			outfile << "particles:" << p_numParticles << " iterations:" << steps << " timing:" << milliseconds << " doubleBuffer:" << doubleBuffer << "\n";
 			for (int i = 0; i < p_numParticles; i++) {
 #if (STORAGE_TYPE && !RENDER_ENABLE)
 				outfile << positions[i] << " ";
@@ -415,6 +506,9 @@ ParticleSystemGPU::~ParticleSystemGPU() {
 #else
 		cudaFree(d_positions);
 		cudaFree(d_colors);
+#if (doubleBuffer)
+		cudaFree(d_positions2);
+#endif
 #endif
 	
 }

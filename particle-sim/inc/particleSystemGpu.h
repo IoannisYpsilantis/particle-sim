@@ -40,6 +40,7 @@ public:
 
 	//Particle Data Device
 	float* d_positions;
+	float* d_positions2;
 	float* d_velocities;
 	unsigned int* d_colors;
 	unsigned char* d_particleType;
@@ -54,6 +55,10 @@ protected:
 	cudaGraphicsResource* colorResource;
 
 	cudaEvent_t event;
+
+	bool buf;
+	float* src;
+	float* dst;
 };
 
 
