@@ -31,7 +31,7 @@ protected:
 
 	// Particle Data
 	float* positions; // 1D Array containing spacial data of each particle (positionElementsCount * numParticles)
-	float* positinns2; //Used for double buffering
+	float* positions2; //Used for double buffering
 
 	float* src; //Will always point to either positions or positions2
 	float* dst; //Will always point to either positions or positions2

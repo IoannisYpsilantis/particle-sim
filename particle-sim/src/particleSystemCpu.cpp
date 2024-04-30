@@ -7,7 +7,7 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 		int positionElementsCount = 4 * numParticles;
 		positions = new float[positionElementsCount];
 #if doubleBuffer
-		postions2 = new float[positionElementsCount];
+		positions2 = new float[positionElementsCount];
 #endif
 
 		// Initialize Colors array
@@ -151,12 +151,15 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 		}
 
 #if (doubleBuffer)
+		for (int i = 0; i < p_numParticles * 4; i++) {
+			positions2[i] = positions[i]; //This is really for the a (x,y,z,a) since it isn't overwritten
+		}
 		src = positions;
 		dst = positions2;
 #else
 		src = positions;
 		dst = positions;
-#endif // 
+#endif 
 
 #if (RENDER_ENABLE)
 		glGenVertexArrays(1, &VAO);
@@ -202,7 +205,7 @@ float square(float val) {
 	return pow(val, 2);
 }
 
-void ParticleSystemCPU::update(float timeDelta, float* src, float* dst) {
+void ParticleSystemCPU::update(float timeDelta) {
 	for (int i = 0; i < p_numParticles; i++) {
 		//Update velocities
 		int part_type = particleType[i];
@@ -210,9 +213,15 @@ void ParticleSystemCPU::update(float timeDelta, float* src, float* dst) {
 		float force_y = 0.0f;
 		float force_z = 0.0f;
 		for (int j = 0; j < p_numParticles; j++) {
+#if (doubleBuffer)
 			float dist_x = src[i * 4] - src[j * 4];
 			float dist_y = src[i * 4 + 1] - src[j * 4 + 1];
 			float dist_z = src[i * 4 + 2] - src[j * 4 + 2];
+#else
+			float dist_x = positions[i * 4] - positions[j * 4];
+			float dist_y = positions[i * 4 + 1] - positions[j * 4 + 1];
+			float dist_z = positions[i * 4 + 2] - positions[j * 4 + 2];
+#endif
 
 			float dist_square = square(dist_x) + square(dist_y) + square(dist_z);
 			float dist = sqrt(dist_square);
@@ -254,22 +263,39 @@ void ParticleSystemCPU::update(float timeDelta, float* src, float* dst) {
 		velocities[i * 3 + 1] *= dampingFactor;
 		velocities[i * 3 + 2] *= dampingFactor;
 	}
-
+#if (doubleBuffer)
 	for (int i = 0; i < p_numParticles; i++) {
 		//Update positions from velocities only after all velocities were considered
-		dst[i * 4] += velocities[i * 3] * timeDelta;
+		dst[i * 4] = src[i * 4] + velocities[i * 3] * timeDelta;
 		if (abs(dst[i * 4]) > boundingBox) {
 			velocities[i * 3] = -1 * velocities[i * 3];
 		}
-		dst[i * 4 + 1] += velocities[i * 3 + 1] * timeDelta;
+		dst[i * 4 + 1] = src[i * 4 + 1] + velocities[i * 3 + 1] * timeDelta;
 		if (abs(dst[i * 4 + 1]) > boundingBox) {
 			velocities[i * 3 + 1] = -1 * velocities[i * 3 + 1];
 		}
-		dst[i * 4 + 2] += velocities[i * 3 + 2] * timeDelta;
+		dst[i * 4 + 2] = src[i * 4 + 2] + velocities[i * 3 + 2] * timeDelta;
 		if (abs(dst[i * 4 + 2]) > boundingBox) {
 			velocities[i * 3 + 2] = -1 * velocities[i * 3 + 2];
 		}
 	}
+#else
+	for (int i = 0; i < p_numParticles; i++) {
+		//Update positions from velocities only after all velocities were considered
+		positions[i * 4] += velocities[i * 3] * timeDelta;
+		if (abs(positions[i * 4]) > boundingBox) {
+			velocities[i * 3] = -1 * velocities[i * 3];
+		}
+		positions[i * 4 + 1] += velocities[i * 3 + 1] * timeDelta;
+		if (abs(positions[i * 4 + 1]) > boundingBox) {
+			velocities[i * 3 + 1] = -1 * velocities[i * 3 + 1];
+		}
+		positions[i * 4 + 2] += velocities[i * 3 + 2] * timeDelta;
+		if (abs(positions[i * 4 + 2]) > boundingBox) {
+			velocities[i * 3 + 2] = -1 * velocities[i * 3 + 2];
+		}
+	}
+#endif
 }
 
 void ParticleSystemCPU::flip() {
@@ -280,14 +306,18 @@ void ParticleSystemCPU::flip() {
 
 void ParticleSystemCPU::writecurpostofile(char* file, int steps, float milliseconds) {
 	std::ofstream outfile(file);
-
+#if doubleBuffer
+	float* data = src;
+#else
+	float* data = positions;
+#endif
 	if (outfile.is_open()) {
-		outfile << "particles:" << p_numParticles << " iterations:" << steps << " timing:" << milliseconds << "\n";
+		outfile << "particles:" << p_numParticles << " iterations:" << steps << " timing:" << milliseconds << " doubleBuffer:" << doubleBuffer << "\n";
 		for (int i = 0; i < p_numParticles; i++) {
-			outfile << positions[i * 4] << " ";
-			outfile << positions[i * 4 + 1] << " ";
-			outfile << positions[i * 4 + 2] << " ";
-			outfile << positions[i * 4 + 3] << "\n";
+			outfile << data[i * 4] << " ";
+			outfile << data[i * 4 + 1] << " ";
+			outfile << data[i * 4 + 2] << " ";
+			outfile << data[i * 4 + 3] << "\n";
 		}
 	}
 	else {
@@ -300,7 +330,11 @@ void ParticleSystemCPU::display() {
 #if (RENDER_ENABLE)
 		//Update the positions
 		glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+#if (doubleBuffer)
 		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * p_numParticles, dst, GL_STREAM_DRAW);
+#else
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * p_numParticles, positions, GL_STREAM_DRAW);
+#endif
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);

@@ -348,6 +348,10 @@ void ParticleSystemGPU::update(float timeDelta) {
 #endif
 }
 
+void ParticleSystemGPU::flip() {
+	//To do
+}
+
 
 
 void ParticleSystemGPU::writecurpostofile(char* file, int steps, float milliseconds) {
