@@ -44,3 +44,18 @@ def compare_positions(num_particles, sim1, sim2, tol = 1e-3):
     if len(counter_examples) > 0:
         return False, counter_examples
     return True, counter_examples
+
+
+def get_timing(id, directory):
+    files = os.listdir(directory)
+    numParticles = []
+    time = []
+    finalPos = {}
+    for file in files:
+        if file.split("_")[-1] == str(id) + ".txt":
+            header, data = read_file(os.path.join(directory, file))
+            numParticles.append(int(header["particles"]))
+            time.append(float(header["timing"])/float(header["iterations"]))
+            finalPos[int(header["particles"])] = data
+    return pd.DataFrame({"particles": numParticles, "timing": time}).sort_values(by=["particles"]), finalPos
+            

@@ -5,7 +5,7 @@
 #include <device_launch_parameters.h>
 
 //This is added to the file name - very helpful for associating runs for comparison
-constexpr int ID = 2;
+constexpr int ID = 21;
 
 // Program Controls
 #define RENDER_ENABLE (1)
@@ -15,7 +15,7 @@ constexpr int ID = 2;
 						
 
 //Program Execution Type Specification
-#define UNROLL_ENABLE (0)
+#define UNROLL_ENABLE (1)
 #define doubleBuffer (0) //Whether to double buffer positions or not.
 #define binningGPU (0) //False is naive
 						//True is to be implemented improved GPU. (Might be handy to make this a control, it also might become an int)
@@ -34,7 +34,7 @@ constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 // Environment Parameters
 constexpr int numParticles = 1000;
 constexpr int systemInitType = 2;
-constexpr int maxSteps = 500; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
+constexpr int maxSteps = 100; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 constexpr int seed = 42; //Seed for run, set to 1 for random generation.
 constexpr float timeStep = 1e-7;
 constexpr float dampingFactor = 0.999;

@@ -82,10 +82,10 @@ __global__ void update_protons(float timeDelta, int numParticles, int numE, int 
 			float force = (float)coulomb_scalar / dist * d_charges[part_type] * d_charges[particleType[j]];
 
 			if (dist < yukawa_cutoff) {
-				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				//force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
 			}
 			else {
-				force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				//force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
 			}
 
 			//Break force into components
@@ -93,6 +93,30 @@ __global__ void update_protons(float timeDelta, int numParticles, int numE, int 
 			force_y += force * dist_y / dist;
 			force_z += force * dist_z / dist;
 
+		}
+
+		for (int j = numE + numP; j < numParticles; j++) {
+			float dist_x = positions[gid * 4] - positions[j * 4];
+			float dist_y = positions[gid * 4 + 1] - positions[j * 4 + 1];
+			float dist_z = positions[gid * 4 + 2] - positions[j * 4 + 2];
+			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
+			float dist = sqrt(dist_square);
+
+			float force = 0.0;
+
+			if (dist < yukawa_cutoff) {
+				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+			}
+			else {
+				force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+			}
+
+			//Break force into components
+			if (dist > 0) {
+				force_x += force * dist_x / dist;
+				force_y += force * dist_y / dist;
+				force_z += force * dist_z / dist;
+			}
 		}
 
 		//Update velocities
@@ -139,9 +163,12 @@ __global__ void update_neutrons(float timeDelta, int numParticles, int numE, int
 			}
 
 			//Break force into components
-			force_x += force * dist_x / dist;
-			force_y += force * dist_y / dist;
-			force_z += force * dist_z / dist;
+			if (dist > 0) {
+				force_x += force * dist_x / dist;
+				force_y += force * dist_y / dist;
+				force_z += force * dist_z / dist;
+			}
+			
 		}
 		//Update velocities
 		velocities[gid * 3] += force_x * d_inv_masses[part_type] * timeDelta;
@@ -475,6 +502,9 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 			numProtons = it;
 			numNeutrons = it;
 			numElectrons = numParticles - 2 * it;
+			std::cout << "numProtons" << numProtons << std::endl;
+			std::cout << "numNeutrons" << numNeutrons << std::endl;
+			std::cout << "numElectrons" << numElectrons << std::endl;
 
 			electronGridSize = (int)ceil((float)numElectrons / (float)TILE_SIZE);
 			protonGridSize = (int)ceil((float)numProtons / (float)TILE_SIZE);
@@ -627,12 +657,16 @@ float* ParticleSystemGPU::getPositions() {
 #endif
 
 		int numBytes = p_numParticles * 4 * sizeof(float);
+#if doubleBuffer
 		if (buf) {
 			cudaMemcpy(positions, d_positions2, numBytes, cudaMemcpyDeviceToHost);
 		}
 		else {
 			cudaMemcpy(positions, d_positions, numBytes, cudaMemcpyDeviceToHost);
 		}
+#else
+		cudaMemcpy(positions, d_positions, numBytes, cudaMemcpyDeviceToHost);
+#endif
 		
 
 #if (RENDER_ENABLE)
