@@ -387,8 +387,10 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 		dimBlock = TILE_SIZE;
 		dimGrid = (int)ceil((float)numParticles / (float)TILE_SIZE);
 #else
-		dimBlock = (TILE_SIZE, TILE_SIZE);
-		dimGrid = ((int)ceil((float)numParticles / (float)TILE_SIZE), (int)ceil((float)numParticles / (float)TILE_SIZE));
+		dimBlock = dim3(TILE_SIZE, TILE_SIZE);
+		dimGrid = dim3((int)ceil((float)numParticles / (float)TILE_SIZE), (int)ceil((float)numParticles / (float)TILE_SIZE));
+		std::cout << dimBlock.x << " " << dimBlock.y << std::endl;
+		std::cout << dimGrid.x << " " << dimGrid.y << std::endl;
 #endif
 
 		cudaEventCreate(&event);
@@ -714,9 +716,9 @@ void ParticleSystemGPU::update(float timeDelta) {
 
 		update_positions<<<dimGrid, dimBlock>>>(timeDelta, d_positions, d_velocities);
 #elif (UNROLL_ENABLE)
-		update_unroll << <dimGrid, dimBlock >> > (timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
-		cudaThreadSynchronize();
-		update_positions << <dimGrid, dimBlock >> > (timeDelta, d_positions, d_velocities);
+		update_unroll<<<dimGrid, dimBlock>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
+		//cudaThreadSynchronize();
+		update_positions<<<dimGrid, dimBlock>>>(timeDelta, d_positions, d_velocities);
 #else
 		update_naive<<<dimGrid, dimBlock>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
 

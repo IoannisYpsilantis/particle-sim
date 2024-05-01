@@ -8,7 +8,7 @@
 constexpr int ID = 21;
 
 // Program Controls
-#define RENDER_ENABLE (1)
+#define RENDER_ENABLE (0)
 #define TIMING_ENABLE (1)
 #define GPU_ENABLE (1)
 #define SAVE_FINAL (1)
@@ -57,7 +57,7 @@ constexpr float yukawa_cutoff = 0.8          * 1e-15/distance_step; //Sweet spot
 
 
 // GPU Configuration
-#define TILE_SIZE 128
+#define TILE_SIZE 32
 
 #if binningGPU
 //How many bins in each direction - could define based on env (bounding box)
