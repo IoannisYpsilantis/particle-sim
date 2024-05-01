@@ -7,6 +7,7 @@
 
 // Program Includes
 #include "particleSystem.h"
+//#include "ordered.h"
 
 // Visualization Includes
 #include <glad/glad.h>
@@ -46,19 +47,32 @@ public:
 	unsigned char* d_particleType;
 
 protected:
-
+	
 	//Kernel specs
 	int blockSize;
 	int gridSize;
+
+#if orderedParticles
+	int electronGridSize;
+	int protonGridSize;
+	int neutronGridSize;
+#endif
 
 	cudaGraphicsResource* positionResource;
 	cudaGraphicsResource* colorResource;
 
 	cudaEvent_t event;
 
+	//Double buffering
 	bool buf;
 	float* src;
 	float* dst;
+
+	//Binning
+	int* bin;
+	int* d_bin; //(binx, biny, binz, binDepth, 1)
+	int* overflow;
+	int* d_overflow;
 };
 
 

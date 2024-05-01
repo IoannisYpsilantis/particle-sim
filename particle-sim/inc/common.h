@@ -1,20 +1,26 @@
 #ifndef __COMMON_H_
 #define __COMMON_H_
 
+#include <cuda.h>
+#include <device_launch_parameters.h>
+
 //This is added to the file name - very helpful for associating runs for comparison
-constexpr int ID = 6;
+constexpr int ID = 11;
 
 // Program Controls
 #define RENDER_ENABLE (0)
 #define TIMING_ENABLE (1)
-#define GPU_ENABLE (1)
+#define GPU_ENABLE (0)
 #define SAVE_FINAL (1)
 						
 
 //Program Execution Type Specification
-#define doubleBuffer (1) //Whether to double buffer positions or not.
+#define doubleBuffer (0) //Whether to double buffer positions or not.
 #define binningGPU (0) //False is naive
 						//True is to be implemented improved GPU. (Might be handy to make this a control, it also might become an int)
+#define orderedParticles (0) //Whether or not to store particles in buffers as protons, neutrons, and electrons.
+						  //If this is done, an imporved GPU can be implemented
+
 
 // OpenGL Window Parameters
 constexpr int width = 800;
@@ -27,17 +33,18 @@ constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 // Environment Parameters
 constexpr int numParticles = 5000;
 constexpr int systemInitType = 2;
-constexpr int maxSteps = 1000; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
+constexpr int maxSteps = 500; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 constexpr int seed = 42; //Seed for run, set to 1 for random generation.
-constexpr float timeStep = 1e-7;
+constexpr float timeStep = 1e-9;
 constexpr float dampingFactor = 0.999;
-constexpr int boundingBox = 2000000; //The size of the problem
+constexpr int boundingBox = 200000; //The size of the problem
 
 //Given timeStep is 1e-7 it seems have numParticles = 5 * boundingBox is pretty good.
 
 // More Constants :)
 constexpr float inv_masses[] = { 1.836152673e3, 1.0, 1.0 }; //This is in AU (1AU ~ 1 proton ~ 1 nuetron.
 constexpr float charges[] = { -1.0, 1.0, 0.0 };
+
 
 //refer to equations.ipynb to see why these value is what it is. 
 constexpr float distance_step = 1e-15; //The step of position. Used for some initializiation
@@ -53,11 +60,14 @@ constexpr float yukawa_cutoff = 0.8          * 1e-15/distance_step; //Sweet spot
 
 #if binningGPU
 //How many bins in each direction - could define based on env (bounding box)
-constexpr int binWidth = 100;
-constexpr int binHeight = 100;
-constexpr int binDepth = 100;
+constexpr int binX = 100;
+constexpr int binY = 100;
+constexpr int binZ = 100;
+constexpr int binDepth = 15;      //How atoms a bin will have. Overflow will be calculated on CPU.
+constexpr int overflowSize = 100; 
 constexpr int CoulombRadius = 15; //Radius of bins for Coulomb forces
 constexpr int YukawaRadius = 1;   //Radius of bins for Yukawa forces
+
 
 //If radius is too small then the algorithm is incorrect
 //If the radius is too big then more is calculated than necessary

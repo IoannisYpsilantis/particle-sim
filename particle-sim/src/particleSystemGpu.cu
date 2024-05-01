@@ -3,6 +3,158 @@
 __constant__ float d_inv_masses[3];
 __constant__ float d_charges[3];
 
+__global__ void update_electrons(float timeDelta, int numParticles, int numE, int numP, float* positions, float* velocities, unsigned char* particleType) {
+
+	int gid = blockIdx.x * blockDim.x + threadIdx.x;
+	if (gid < numE) {
+		int part_type = particleType[gid];
+		float force_x = 0.0;
+		float force_y = 0.0;
+		float force_z = 0.0;
+
+		for (int j = 0; j < numE + numP; j++) {
+			if (gid == j) {
+				continue;
+			}
+			float dist_x = positions[gid * 4] - positions[j * 4];
+			float dist_y = positions[gid * 4 + 1] - positions[j * 4 + 1];
+			float dist_z = positions[gid * 4 + 2] - positions[j * 4 + 2];
+			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
+			float dist = sqrt(dist_square);
+
+			float force = 0.0;
+			//Coulomb force
+			force += (float)coulomb_scalar / dist * d_charges[part_type] * d_charges[particleType[j]];
+
+			//Break force into components
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
+		}
+
+		//Update velocities
+		velocities[gid * 3] += force_x * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 1] += force_y * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 2] += force_z * d_inv_masses[part_type] * timeDelta;
+
+		velocities[gid * 3] *= dampingFactor;
+		velocities[gid * 3 + 1] *= dampingFactor;
+		velocities[gid * 3 + 2] *= dampingFactor;
+	}
+
+}
+
+__global__ void update_protons(float timeDelta, int numParticles, int numE, int numP, int numN, float* positions, float* velocities, unsigned char* particleType) {
+
+	int gid = numE + blockIdx.x * blockDim.x + threadIdx.x;
+	if (gid < numE + numP) {
+		int part_type = particleType[gid];
+		float force_x = 0.0;
+		float force_y = 0.0;
+		float force_z = 0.0;
+
+		for (int j = 0; j < numE; j++) {
+			float dist_x = positions[gid * 4] - positions[j * 4];
+			float dist_y = positions[gid * 4 + 1] - positions[j * 4 + 1];
+			float dist_z = positions[gid * 4 + 2] - positions[j * 4 + 2];
+			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
+			float dist = sqrt(dist_square);
+
+			float force = (float)coulomb_scalar / dist * d_charges[part_type] * d_charges[particleType[j]];
+
+			//Break force into components
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
+		}
+
+
+		for (int j = numE; j < numE + numP; j++) {
+			if (gid == j) {
+				continue;
+			}
+			float dist_x = positions[gid * 4] - positions[j * 4];
+			float dist_y = positions[gid * 4 + 1] - positions[j * 4 + 1];
+			float dist_z = positions[gid * 4 + 2] - positions[j * 4 + 2];
+			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
+			float dist = sqrt(dist_square);
+
+			float force = (float)coulomb_scalar / dist * d_charges[part_type] * d_charges[particleType[j]];
+
+			if (dist < yukawa_cutoff) {
+				force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+			}
+			else {
+				force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+			}
+
+			//Break force into components
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
+
+		}
+
+		//Update velocities
+		velocities[gid * 3] += force_x * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 1] += force_y * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 2] += force_z * d_inv_masses[part_type] * timeDelta;
+
+		velocities[gid * 3] *= dampingFactor;
+		velocities[gid * 3 + 1] *= dampingFactor;
+		velocities[gid * 3 + 2] *= dampingFactor;
+	}
+}
+
+
+__global__ void update_neutrons(float timeDelta, int numParticles, int numE, int numP, int numN, float* positions, float* velocities, unsigned char* particleType) {
+	int gid = numE + numP + blockIdx.x * blockDim.x + threadIdx.x;
+	if (gid < numParticles) {
+		int part_type = particleType[gid];
+		float force_x = 0.0;
+		float force_y = 0.0;
+		float force_z = 0.0;
+
+		for (int j = numE; j < numParticles; j++) {
+			if (gid == j) {
+				continue;
+			}
+			float dist_x = positions[gid * 4] - positions[j * 4];
+			float dist_y = positions[gid * 4 + 1] - positions[j * 4 + 1];
+			float dist_z = positions[gid * 4 + 2] - positions[j * 4 + 2];
+			float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
+			float dist = sqrt(dist_square);
+
+			//Strong Forces
+			//P-N close attraction N-N close attraction 
+			float force = 0.0f;
+			if (part_type != 0 && particleType[j] != 0) {
+				if (dist < yukawa_cutoff) {
+					force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				}
+				else {
+					force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				}
+
+			}
+
+			//Break force into components
+			force_x += force * dist_x / dist;
+			force_y += force * dist_y / dist;
+			force_z += force * dist_z / dist;
+		}
+		//Update velocities
+		velocities[gid * 3] += force_x * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 1] += force_y * d_inv_masses[part_type] * timeDelta;
+		velocities[gid * 3 + 2] += force_z * d_inv_masses[part_type] * timeDelta;
+
+		velocities[gid * 3] *= dampingFactor;
+		velocities[gid * 3 + 1] *= dampingFactor;
+		velocities[gid * 3 + 2] *= dampingFactor;
+	}
+
+}
+
 __global__ void update_naive(float timeDelta, int numParticles, float* positions, float* velocities, unsigned char* particleType) {
 	
 	int gid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -54,6 +206,9 @@ __global__ void update_naive(float timeDelta, int numParticles, float* positions
 	}
 
 }
+
+
+
 
 __global__ void update_positions(float timeDelta, float * positions, float *velocities) {
 	int gid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -143,6 +298,8 @@ __global__ void update_doubleBuffer(float timeDelta, int numParticles, float* sr
 
 
 
+
+
 ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed) {
 		p_numParticles = numParticles;
 		
@@ -150,6 +307,7 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 
 		blockSize = TILE_SIZE;
 		gridSize = (int)ceil((float)numParticles / (float)TILE_SIZE);
+
 		cudaEventCreate(&event);
 
 		// Initialize Positions array
@@ -193,7 +351,10 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 			int it = numParticles / 3;
 			int pos_offset = 4;
 			int vel_offset = 3;
-			for (unsigned int i = 0; i < it; i++) {
+			numProtons = it;
+			numNeutrons = it;
+			numElectrons = numParticles - 2 * it;
+			for (unsigned int i = numElectrons; i < numElectrons + numProtons; i++) {
 
 				//Pair up protons and neutrons
 				float pos_X = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
@@ -213,7 +374,7 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 				particleType[i + it] = 2;
 			}
 			//Scatter in some electrons
-			for (unsigned int i = 2 * it - 1; i < numParticles; i++) {
+			for (unsigned int i = 0; i < numElectrons; i++) {
 				positions[i * pos_offset] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 				positions[i * pos_offset + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 				positions[i * pos_offset + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
@@ -223,7 +384,7 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 
 			//Initialize velocities to 0 and give particales the proper color.
 			for (unsigned int i = 0; i < numParticles; i++) {
-				
+
 				positions[i * pos_offset + 3] = 1.0f * boundingBox; // This will always stay as 1, it will be used for mapping 3D to 2D space
 
 				velocities[i * vel_offset] = 0;
@@ -254,6 +415,21 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 			if (seed != -1) {
 				srand(seed);
 			}
+			
+#if (orderedParticles)
+			int it = numParticles / 3;
+			numProtons = it;
+			numNeutrons = it;
+			numElectrons = numParticles - 2 * it;
+
+			electronGridSize = (int)ceil((float)numElectrons / (float)TILE_SIZE);
+			protonGridSize = (int)ceil((float)numProtons / (float)TILE_SIZE);
+			neutronGridSize = (int)ceil((float)numNeutrons / (float)TILE_SIZE);
+#else
+			numProtons = 0;
+			numNeutrons = 0;
+			numElectrons = 0;
+#endif
 			for (unsigned int i = 0; i < numParticles; i++) {
 				int pos_offset = 4;
 				int vel_offset = 3;
@@ -269,8 +445,30 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 				velocities[i * vel_offset + 2] = ((float)(rand() % 500) - 250.0) * 1000.0;
 
 				// Generates random number (either 0, 1, 2) from uniform dist
-				particleType[i] = rand() % 3;
-				//particleType[i] = 2;
+#if (orderedParticles)
+				if (i < numElectrons) {
+					particleType[i] = 0;
+				} 
+				else if (i < numElectrons + numProtons) {
+					particleType[i] = 1;
+				}
+				else {
+					particleType[i] = 2;
+				}
+#else
+				int type = rand() % 3;
+				particleType[i] = type;
+				if (type == 0) {
+					numElectrons++;
+				}
+				else if (type == 1) {
+					numProtons++;
+				}
+				else {
+					numNeutrons++;
+				}
+
+#endif
 
 				// Sets color based on particle type
 				if (particleType[i] == 0) { // If Electron
@@ -293,7 +491,7 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 		//Error bad method
 		else {
 			std::cerr << "Bad Initialization";
-			}
+		}
 
 #if (RENDER_ENABLE)
 			glGenVertexArrays(1, &VAO);
@@ -352,6 +550,19 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 	
 		cudaMalloc(&d_particleType, numParticles * sizeof(unsigned char));
 		cudaMemcpy(d_particleType, particleType, numParticles * sizeof(unsigned char), cudaMemcpyHostToDevice);
+
+#if binningGPU
+		int binSize = binX * binY * binZ * binDepth
+		cudaMalloc(&d_bin, binSize * sizeof(int);
+		int blockSize = 256;
+		int gridSize = (int)ceil((float)binSize / (float)blockSize);
+		initializeBuffer<<<gridSize, blockSize>>>(binSize, d_bin);
+		
+		
+		cudaMalloc(&d_overflow, overflowSize * sizeof(int));
+		gridSize = (int)ceil((float)overflowSize / (float)blockSize);
+		initializeBuffer<<<gridSize, blockSize>>>(overflowSize, d_overflow);
+#endif
 }
 
 float* ParticleSystemGPU::getPositions() {
@@ -409,10 +620,19 @@ void ParticleSystemGPU::update(float timeDelta) {
 #if (doubleBuffer)
 		update_doubleBuffer<<<gridSize, blockSize>>>(timeDelta, p_numParticles, src, dst, d_velocities, d_particleType);
 #else
+#if (orderedParticles)
+		update_electrons<<<electronGridSize, blockSize>>>(timeDelta, p_numParticles, numElectrons, numProtons, d_positions, d_velocities, d_particleType);
+		update_protons<<<protonGridSize, blockSize>>>(timeDelta, p_numParticles, numElectrons, numProtons, numNeutrons, d_positions, d_velocities, d_particleType);
+		update_neutrons<<<neutronGridSize, blockSize>>>(timeDelta, p_numParticles, numElectrons, numProtons, numNeutrons, d_positions, d_velocities, d_particleType);
+
+		update_positions<<<gridSize, blockSize>>>(timeDelta, d_positions, d_velocities);
+#else
 		update_naive<<<gridSize, blockSize>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
 
 		update_positions<<<gridSize, blockSize>>>(timeDelta, d_positions, d_velocities);
 		//std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
+#endif
+
 #endif
 		cudaError_t cudaStatusFlag = cudaGetLastError();
 		if (cudaStatusFlag != cudaSuccess) {

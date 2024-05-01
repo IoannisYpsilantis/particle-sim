@@ -44,9 +44,15 @@
     <ClInclude Include="inc\common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\ordered.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\particleSystemGpu.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\ordered.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>

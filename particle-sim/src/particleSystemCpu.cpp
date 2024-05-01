@@ -48,7 +48,10 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 			int it = numParticles / 3;
 			int pos_offset = 4;
 			int vel_offset = 3;
-			for (unsigned int i = 0; i < it; i++) {
+			numProtons = it;
+			numNeutrons = it;
+			numElectrons = numParticles - 2 * it;
+			for (unsigned int i = numElectrons; i < numElectrons+numProtons; i++) {
 				
 				//Pair up protons and neutrons
 				float pos_X = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
@@ -68,7 +71,7 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 				particleType[i + it] = 2;
 			}
 			//Scatter in some electrons
-			for (unsigned int i = 2*it - 1; i < numParticles; i++) {
+			for (unsigned int i = 0; i < numElectrons; i++) {
 				positions[i * pos_offset] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 				positions[i * pos_offset + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 				positions[i * pos_offset + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
@@ -107,47 +110,73 @@ ParticleSystemCPU::ParticleSystemCPU(int numParticles, int initMethod, int seed)
 		// Random initialization in 3 dimensions
 		else if (initMethod == 2) {
 			if (seed != -1) {
-					srand(seed);
+				srand(seed);
 			}
+			int it = numParticles / 3;
+#if (orderedParticles)
+			numProtons = it;
+			numNeutrons = it;
+			numElectrons = numParticles - 2 * it;
+#else
+			numProtons, numNeutrons, numElectrons = 0;
+#endif
 			for (unsigned int i = 0; i < numParticles; i++) {
 				int pos_offset = 4;
-			    int vel_offset = 3;
+				int vel_offset = 3;
 				// Randomly initialize position in range [-1,1)
 				positions[i * pos_offset] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 				positions[i * pos_offset + 1] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 				positions[i * pos_offset + 2] = ((float)(rand() % 2000) - 1000.0) / 1000.0 * boundingBox;
 				positions[i * pos_offset + 3] = 1.0f * boundingBox; // This will always stay as 1, it will be used for mapping 3D to 2D space
-			
+
 				// Randomly initializes velocity in range [-250000,250000)
 				velocities[i * vel_offset] = ((float)(rand() % 500) - 250.0) * 1000.0;
 				velocities[i * vel_offset + 1] = ((float)(rand() % 500) - 250.0) * 1000.0;
 				velocities[i * vel_offset + 2] = ((float)(rand() % 500) - 250.0) * 1000.0;
 
 				// Generates random number (either 0, 1, 2) from uniform dist
-				particleType[i] = rand() % 3;
-				//particleType[i] = 2;
+#if (orderedParticles)
+				if (i < numElectrons) {
+					particleType[i] = 0;
+				}
+				else if (i < numElectrons + numProtons) {
+					particleType[i] = 1;
+				}
+				else {
+					particleType[i] = 2;
+				}
+#else
+				int type = rand() % 3;
+				particleType[i] = type;
+				if (type == 0) {
+					numElectrons++;
+				}
+				else if (type == 1) {
+					numProtons++;
+				}
+				else {
+					numNeutrons++;
+				}
+
+#endif
 
 				// Sets color based on particle type
 				if (particleType[i] == 0) { // If Electron
-						colors[i * vel_offset] = ELECTRON_COLOR[0];
-						colors[i * vel_offset + 1] = ELECTRON_COLOR[1];
-						colors[i * vel_offset + 2] = ELECTRON_COLOR[2];
+					colors[i * vel_offset] = ELECTRON_COLOR[0];
+					colors[i * vel_offset + 1] = ELECTRON_COLOR[1];
+					colors[i * vel_offset + 2] = ELECTRON_COLOR[2];
 				}
 				else if (particleType[i] == 1) { // If Proton
-						colors[i * vel_offset] = PROTON_COLOR[0];
-						colors[i * vel_offset + 1] = PROTON_COLOR[1];
-						colors[i * vel_offset + 2] = PROTON_COLOR[2];
+					colors[i * vel_offset] = PROTON_COLOR[0];
+					colors[i * vel_offset + 1] = PROTON_COLOR[1];
+					colors[i * vel_offset + 2] = PROTON_COLOR[2];
 				}
 				else {
-						colors[i * vel_offset] = NEUTRON_COLOR[0]; //Else neutron
-						colors[i * vel_offset + 1] = NEUTRON_COLOR[1];
-						colors[i * vel_offset + 2] = NEUTRON_COLOR[2];
+					colors[i * vel_offset] = NEUTRON_COLOR[0]; //Else neutron
+					colors[i * vel_offset + 1] = NEUTRON_COLOR[1];
+					colors[i * vel_offset + 2] = NEUTRON_COLOR[2];
 				}
 			}
-		}
-		//Error bad method
-		else {
-				std::cerr << "Bad Initialization";
 		}
 
 #if (doubleBuffer)

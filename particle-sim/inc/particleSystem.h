@@ -29,6 +29,10 @@ protected:
 	
 	int p_numParticles;
 
+	int numProtons;
+	int numNeutrons;
+	int numElectrons;
+
 	// Particle Data
 	float* positions; // 1D Array containing spacial data of each particle (positionElementsCount * numParticles)
 	float* positions2; //Used for double buffering
