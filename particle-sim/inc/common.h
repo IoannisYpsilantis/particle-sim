@@ -10,11 +10,12 @@ constexpr int ID = 11;
 // Program Controls
 #define RENDER_ENABLE (0)
 #define TIMING_ENABLE (1)
-#define GPU_ENABLE (0)
+#define GPU_ENABLE (1)
 #define SAVE_FINAL (1)
 						
 
 //Program Execution Type Specification
+#define UNROLL_ENABLE (0)
 #define doubleBuffer (0) //Whether to double buffer positions or not.
 #define binningGPU (0) //False is naive
 						//True is to be implemented improved GPU. (Might be handy to make this a control, it also might become an int)

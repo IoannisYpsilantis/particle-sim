@@ -303,10 +303,17 @@ __global__ void update_doubleBuffer(float timeDelta, int numParticles, float* sr
 ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed) {
 		p_numParticles = numParticles;
 		
+#if (doubleBuffer)
 		buf = false; //Note: this is used for doubleBuffering
+#endif
 
-		blockSize = TILE_SIZE;
-		gridSize = (int)ceil((float)numParticles / (float)TILE_SIZE);
+#if (!UNROLL_ENABLE)
+		dimBlock = TILE_SIZE;
+		dimGrid = (int)ceil((float)numParticles / (float)TILE_SIZE);
+#else
+		dimBlock(TILE_SIZE, TILE_SIZE);
+		dimGrid((int)ceil((float)numParticles / (float)TILE_SIZE), (int)ceil((float)numParticles / (float)TILE_SIZE));
+#endif
 
 		cudaEventCreate(&event);
 
@@ -325,13 +332,12 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 		particleType = new unsigned char[numParticles];
 
 		// Circular initialization
-		// Circular initialization
 		if (initMethod == 0) {
 			for (unsigned int i = 0; i < numParticles; i++) {
-
 				float theta = (float)((numParticles - 1 - i) / (float)numParticles * 2.0 * 3.1415); // Ensure floating-point division
 				int pos_offset = 4;
-			    int col_offset = 3;
+			  int col_offset = 3;
+
 				positions[i * pos_offset] = (float)cos(theta) * boundingBox;
 				positions[i * pos_offset + 1] = (float)sin(theta) * boundingBox;
 				positions[i * pos_offset + 2] = 1.0f * boundingBox;
@@ -341,7 +347,6 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 				colors[i * col_offset + 1] = 255 - (i % 255);
 				colors[i * col_offset + 2] = 55;
 			}
-
 		}
 		//Hydrogen atoms
 		else if (initMethod == 1) {
@@ -382,7 +387,7 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 				particleType[i] = 0;
 			}
 
-			//Initialize velocities to 0 and give particales the proper color.
+			//Initialize velocities to 0 and give particles the proper color.
 			for (unsigned int i = 0; i < numParticles; i++) {
 
 				positions[i * pos_offset + 3] = 1.0f * boundingBox; // This will always stay as 1, it will be used for mapping 3D to 2D space
@@ -554,14 +559,14 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 #if binningGPU
 		int binSize = binX * binY * binZ * binDepth
 		cudaMalloc(&d_bin, binSize * sizeof(int);
-		int blockSize = 256;
-		int gridSize = (int)ceil((float)binSize / (float)blockSize);
-		initializeBuffer<<<gridSize, blockSize>>>(binSize, d_bin);
+		int dimBlock = 256;
+		int dimGrid = (int)ceil((float)binSize / (float)dimBlock);
+		initializeBuffer<<<dimGrid, dimBlock>>>(binSize, d_bin);
 		
 		
 		cudaMalloc(&d_overflow, overflowSize * sizeof(int));
-		gridSize = (int)ceil((float)overflowSize / (float)blockSize);
-		initializeBuffer<<<gridSize, blockSize>>>(overflowSize, d_overflow);
+		dimGrid = (int)ceil((float)overflowSize / (float)dimBlock);
+		initializeBuffer<<<dimGrid, dimBlock>>>(overflowSize, d_overflow);
 #endif
 }
 
@@ -618,18 +623,18 @@ void ParticleSystemGPU::update(float timeDelta) {
 		cudaGraphicsResourceGetMappedPointer((void**)&d_positions, &Size, positionResource);
 #endif
 #if (doubleBuffer)
-		update_doubleBuffer<<<gridSize, blockSize>>>(timeDelta, p_numParticles, src, dst, d_velocities, d_particleType);
+		update_doubleBuffer<<<dimGrid, dimBlock>>>(timeDelta, p_numParticles, src, dst, d_velocities, d_particleType);
 #else
 #if (orderedParticles)
-		update_electrons<<<electronGridSize, blockSize>>>(timeDelta, p_numParticles, numElectrons, numProtons, d_positions, d_velocities, d_particleType);
-		update_protons<<<protonGridSize, blockSize>>>(timeDelta, p_numParticles, numElectrons, numProtons, numNeutrons, d_positions, d_velocities, d_particleType);
-		update_neutrons<<<neutronGridSize, blockSize>>>(timeDelta, p_numParticles, numElectrons, numProtons, numNeutrons, d_positions, d_velocities, d_particleType);
+		update_electrons<<<electronGridSize, dimBlock>>>(timeDelta, p_numParticles, numElectrons, numProtons, d_positions, d_velocities, d_particleType);
+		update_protons<<<protonGridSize, dimBlock>>>(timeDelta, p_numParticles, numElectrons, numProtons, numNeutrons, d_positions, d_velocities, d_particleType);
+		update_neutrons<<<neutronGridSize, dimBlock>>>(timeDelta, p_numParticles, numElectrons, numProtons, numNeutrons, d_positions, d_velocities, d_particleType);
 
-		update_positions<<<gridSize, blockSize>>>(timeDelta, d_positions, d_velocities);
+		update_positions<<<dimGrid, dimBlock>>>(timeDelta, d_positions, d_velocities);
 #else
-		update_naive<<<gridSize, blockSize>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
+		update_naive<<<dimGrid, dimBlock>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
 
-		update_positions<<<gridSize, blockSize>>>(timeDelta, d_positions, d_velocities);
+		update_positions<<<dimGrid, dimBlock>>>(timeDelta, d_positions, d_velocities);
 		//std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
 #endif
 

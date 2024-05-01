@@ -49,8 +49,8 @@ public:
 protected:
 	
 	//Kernel specs
-	int blockSize;
-	int gridSize;
+	dim3 dimBlock;
+	dim3 dimGrid;
 
 #if orderedParticles
 	int electronGridSize;
