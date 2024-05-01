@@ -5,10 +5,10 @@
 #include <device_launch_parameters.h>
 
 //This is added to the file name - very helpful for associating runs for comparison
-constexpr int ID = 11;
+constexpr int ID = 2;
 
 // Program Controls
-#define RENDER_ENABLE (0)
+#define RENDER_ENABLE (1)
 #define TIMING_ENABLE (1)
 #define GPU_ENABLE (1)
 #define SAVE_FINAL (1)
@@ -32,13 +32,13 @@ constexpr int PROTON_COLOR[3] = { 255, 0, 0 }; // Red
 constexpr int NEUTRON_COLOR[3] = { 204, 204, 0 }; // Yellow
 
 // Environment Parameters
-constexpr int numParticles = 5000;
+constexpr int numParticles = 1000;
 constexpr int systemInitType = 2;
 constexpr int maxSteps = 500; //Cutoff number of iterations, this is handy if rendering is false to determine a stop. Set to -1 to never terminate
 constexpr int seed = 42; //Seed for run, set to 1 for random generation.
-constexpr float timeStep = 1e-9;
+constexpr float timeStep = 1e-7;
 constexpr float dampingFactor = 0.999;
-constexpr int boundingBox = 200000; //The size of the problem
+constexpr int boundingBox = 25199; //The size of the problem
 
 //Given timeStep is 1e-7 it seems have numParticles = 5 * boundingBox is pretty good.
 

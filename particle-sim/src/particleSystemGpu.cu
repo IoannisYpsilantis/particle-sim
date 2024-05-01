@@ -296,8 +296,57 @@ __global__ void update_doubleBuffer(float timeDelta, int numParticles, float* sr
 
 }
 
+__global__ void update_unroll(float timeDelta, int numParticles, float* positions, float* velocities, unsigned char* particleType) {
+	int threadX = (blockIdx.x * blockDim.x) + threadIdx.x;
+	int threadY = (blockIdx.y * blockDim.y) + threadIdx.y;
 
+	if (threadX < numParticles && threadY < numParticles) {
+		int part_type = particleType[threadX];
+		float dist_x = positions[threadX * 4] - positions[threadY * 4];
+		float dist_y = positions[threadX * 4 + 1] - positions[threadY * 4 + 1];
+		float dist_z = positions[threadX * 4 + 2] - positions[threadY * 4 + 2];
+		float dist_square = (dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z);
+		float dist = sqrt(dist_square);
+		if (threadX != threadY) {
+			float force = 0.0;
 
+			// Coulomb force
+			force += (float)coulomb_scalar / dist * d_charges[part_type] * d_charges[particleType[threadY]];
+
+			// Strong Forces
+			// P-N close attraction N-N close attraction 
+			if (part_type != 0 && particleType[threadY] != 0) {
+				if (dist < yukawa_cutoff) {
+					force += yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				}
+				else {
+					force -= yukawa_scalar * exp(-dist / yukawa_radius) / dist;
+				}
+			}
+
+			// Break force into components
+			float force_x = force * dist_x / dist;
+			float force_y = force * dist_y / dist;
+			float force_z = force * dist_z / dist;
+
+			// Update velocities
+			atomicAdd(&velocities[threadX * 3], force_x * d_inv_masses[part_type] * timeDelta);
+			atomicAdd(&velocities[threadX * 3 + 1], force_y * d_inv_masses[part_type] * timeDelta);
+			atomicAdd(&velocities[threadX * 3 + 2], force_z * d_inv_masses[part_type] * timeDelta);
+		}
+
+		// Maybe add syncthreads here
+		__syncthreads();
+
+		// Apply damping
+		if (threadX == threadY) {
+			velocities[threadX * 3] *= dampingFactor;
+			velocities[threadX * 3 + 1] *= dampingFactor;
+			velocities[threadX * 3 + 2] *= dampingFactor;
+		}
+	}
+
+}
 
 
 ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed) {
@@ -311,8 +360,8 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 		dimBlock = TILE_SIZE;
 		dimGrid = (int)ceil((float)numParticles / (float)TILE_SIZE);
 #else
-		dimBlock(TILE_SIZE, TILE_SIZE);
-		dimGrid((int)ceil((float)numParticles / (float)TILE_SIZE), (int)ceil((float)numParticles / (float)TILE_SIZE));
+		dimBlock = (TILE_SIZE, TILE_SIZE);
+		dimGrid = ((int)ceil((float)numParticles / (float)TILE_SIZE), (int)ceil((float)numParticles / (float)TILE_SIZE));
 #endif
 
 		cudaEventCreate(&event);
@@ -624,13 +673,16 @@ void ParticleSystemGPU::update(float timeDelta) {
 #endif
 #if (doubleBuffer)
 		update_doubleBuffer<<<dimGrid, dimBlock>>>(timeDelta, p_numParticles, src, dst, d_velocities, d_particleType);
-#else
-#if (orderedParticles)
+#elif (orderedParticles)
 		update_electrons<<<electronGridSize, dimBlock>>>(timeDelta, p_numParticles, numElectrons, numProtons, d_positions, d_velocities, d_particleType);
 		update_protons<<<protonGridSize, dimBlock>>>(timeDelta, p_numParticles, numElectrons, numProtons, numNeutrons, d_positions, d_velocities, d_particleType);
 		update_neutrons<<<neutronGridSize, dimBlock>>>(timeDelta, p_numParticles, numElectrons, numProtons, numNeutrons, d_positions, d_velocities, d_particleType);
 
 		update_positions<<<dimGrid, dimBlock>>>(timeDelta, d_positions, d_velocities);
+#elif (UNROLL_ENABLE)
+		update_unroll << <dimGrid, dimBlock >> > (timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
+		cudaThreadSynchronize();
+		update_positions << <dimGrid, dimBlock >> > (timeDelta, d_positions, d_velocities);
 #else
 		update_naive<<<dimGrid, dimBlock>>>(timeDelta, p_numParticles, d_positions, d_velocities, d_particleType);
 
@@ -638,7 +690,6 @@ void ParticleSystemGPU::update(float timeDelta) {
 		//std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
 #endif
 
-#endif
 		cudaError_t cudaStatusFlag = cudaGetLastError();
 		if (cudaStatusFlag != cudaSuccess) {
 			std::cerr << "Kernel failed: " << cudaGetErrorString(cudaStatusFlag) << std::endl;
