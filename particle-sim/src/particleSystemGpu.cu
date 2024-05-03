@@ -389,8 +389,6 @@ ParticleSystemGPU::ParticleSystemGPU(int numParticles, int initMethod, int seed)
 #else
 		dimBlock = dim3(TILE_SIZE, TILE_SIZE);
 		dimGrid = dim3((int)ceil((float)numParticles / (float)TILE_SIZE), (int)ceil((float)numParticles / (float)TILE_SIZE));
-		std::cout << dimBlock.x << " " << dimBlock.y << std::endl;
-		std::cout << dimGrid.x << " " << dimGrid.y << std::endl;
 #endif
 
 		cudaEventCreate(&event);
