@@ -33,6 +33,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0535F2C8-B8E3-46C1-B2B0-9BC0381DC94F}</ProjectGuid>
     <RootNamespace>particle_sim</RootNamespace>
+    <ProjectName>particle-sim-VS2019</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
